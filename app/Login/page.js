@@ -1,10 +1,14 @@
 "use client";
+
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function LoginSignup() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [errorPopup, setErrorPopup] = useState(""); 
+  const router = useRouter();
 
   // 🩵 LOGIN HANDLER
   async function handleLogin(e) {
@@ -24,18 +28,19 @@ export default function LoginSignup() {
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem("token", data.token);
-        alert("✅ Login successful!");
+        router.push("/Dashboard");
       } else {
-        alert("❌ " + data.message);
+        setErrorPopup(data.message || "Invalid credentials!");
+        setTimeout(() => setErrorPopup(""), 3000);
       }
     } catch (err) {
-      alert("Server error: " + err.message);
+      setErrorPopup("Server error. Try again later!");
+      setTimeout(() => setErrorPopup(""), 3000);
     } finally {
       setLoading(false);
     }
   }
 
-  // 🩶 SIGNUP HANDLER
   async function handleSignup(e) {
     e.preventDefault();
     setLoading(true);
@@ -53,13 +58,14 @@ export default function LoginSignup() {
 
       const data = await res.json();
       if (res.ok) {
-        alert("✅ Signup successful! You can now log in.");
-        setIsLogin(true);
+        setIsLogin(true); 
       } else {
-        alert("❌ " + data.message);
+        setErrorPopup(data.message || "Signup failed!");
+        setTimeout(() => setErrorPopup(""), 3000);
       }
     } catch (err) {
-      alert("Server error: " + err.message);
+      setErrorPopup("Server error. Try again later!");
+      setTimeout(() => setErrorPopup(""), 3000);
     } finally {
       setLoading(false);
     }
@@ -77,6 +83,21 @@ export default function LoginSignup() {
     >
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+
+      {/* 🚨 Error Popup */}
+      <AnimatePresence>
+        {errorPopup && (
+          <motion.div
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -50, opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="fixed top-6 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-50"
+          >
+            {errorPopup}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="relative flex w-[90%] max-w-5xl overflow-hidden rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-neutral-800 bg-neutral-950/90">
         {/* Image Section */}
@@ -128,7 +149,11 @@ export default function LoginSignup() {
 
                 <form className="space-y-5 mt-6" onSubmit={handleLogin}>
                   <FloatingInput label="Email" type="email" name="email" />
-                  <FloatingInput label="Password" type="password" name="password" />
+                  <FloatingInput
+                    label="Password"
+                    type="password"
+                    name="password"
+                  />
 
                   <div className="flex justify-between text-sm text-neutral-400">
                     <label className="flex items-center gap-2">
@@ -178,7 +203,11 @@ export default function LoginSignup() {
                 <form className="space-y-5 mt-6" onSubmit={handleSignup}>
                   <FloatingInput label="Full Name" type="text" name="name" />
                   <FloatingInput label="Email" type="email" name="email" />
-                  <FloatingInput label="Password" type="password" name="password" />
+                  <FloatingInput
+                    label="Password"
+                    type="password"
+                    name="password"
+                  />
 
                   <button
                     type="submit"
@@ -210,15 +239,23 @@ export default function LoginSignup() {
 /* Floating Input Component */
 function FloatingInput({ label, type, name }) {
   return (
-    <div className="relative group">
+    <div className="relative">
       <input
         type={type}
         name={name}
+        id={name}
         required
-        placeholder=" "
-        className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 pt-5 pb-2 text-white focus:outline-none focus:ring-2 focus:ring-neutral-600 peer transition-all"
+        className="peer w-full bg-neutral-800 border border-neutral-700 rounded-lg px-4 pt-5 pb-2 text-white focus:outline-none focus:ring-2 focus:ring-neutral-600 placeholder-transparent"
+        placeholder={label}
       />
-      <label className="absolute left-4 top-3.5 text-neutral-500 text-sm transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-neutral-500 peer-focus:top-1 peer-focus:text-xs peer-focus:text-gray-300">
+      <label
+        htmlFor={name}
+        className="absolute left-4 top-3.5 text-neutral-500 text-sm transition-all 
+                   peer-placeholder-shown:top-4 peer-placeholder-shown:text-neutral-500 
+                   peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-xs 
+                   peer-focus:text-gray-300 peer-valid:top-1 peer-valid:text-xs 
+                   peer-valid:text-gray-300"
+      >
         {label}
       </label>
     </div>
