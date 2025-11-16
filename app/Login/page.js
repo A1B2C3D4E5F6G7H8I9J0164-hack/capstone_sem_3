@@ -19,7 +19,7 @@ export default function LoginSignup() {
     const password = e.target.password.value;
 
     try {
-      const res = await fetch("http://localhost:5001/api/auth/login", {
+      const res = await fetch("https://capstone-backend-3-jthr.onrender.com/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -50,7 +50,7 @@ export default function LoginSignup() {
     const password = e.target.password.value;
 
     try {
-      const res = await fetch("http://localhost:5001/api/auth/signup", {
+      const res = await fetch("https://capstone-backend-3-jthr.onrender.com/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
