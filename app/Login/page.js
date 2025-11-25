@@ -13,18 +13,25 @@ export default function LoginSignup() {
 
   // Handle OAuth callback
   useEffect(() => {
-    const token = searchParams.get("token");
-    const success = searchParams.get("success");
-    const error = searchParams.get("error");
+    if (typeof window === "undefined") return; // Skip on server
+    
+    try {
+      const token = searchParams?.get("token");
+      const success = searchParams?.get("success");
+      const error = searchParams?.get("error");
 
-    if (token && success === "true") {
-      localStorage.setItem("token", token);
-      router.push("/Dashboard");
-    } else if (error) {
-      setErrorPopup("OAuth authentication failed. Please try again.");
-      setTimeout(() => setErrorPopup(""), 3000);
-      // Clean URL
-      router.replace("/Login");
+      if (token && success === "true") {
+        localStorage.setItem("token", token);
+        router.push("/Dashboard");
+      } else if (error) {
+        setErrorPopup("OAuth authentication failed. Please try again.");
+        setTimeout(() => setErrorPopup(""), 3000);
+        // Clean URL
+        router.replace("/Login");
+      }
+    } catch (err) {
+      // Silently handle any searchParams errors
+      console.error("Error reading search params:", err);
     }
   }, [searchParams, router]);
 
@@ -350,11 +357,7 @@ function FloatingInput({ label, type, name }) {
       />
       <label
         htmlFor={name}
-        className="absolute left-4 top-3.5 text-neutral-500 text-sm transition-all 
-                   peer-placeholder-shown:top-4 peer-placeholder-shown:text-neutral-500 
-                   peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-xs 
-                   peer-focus:text-gray-300 peer-valid:top-1 peer-valid:text-xs 
-                   peer-valid:text-gray-300"
+        className="absolute left-4 top-3.5 text-neutral-500 text-sm transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-neutral-500 peer-placeholder-shown:text-sm peer-focus:top-1 peer-focus:text-xs peer-focus:text-gray-300 peer-valid:top-1 peer-valid:text-xs peer-valid:text-gray-300"
       >
         {label}
       </label>
