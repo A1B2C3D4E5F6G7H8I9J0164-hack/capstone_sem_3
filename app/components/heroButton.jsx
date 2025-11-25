@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
-// ✅ Utility function to combine class names (replacement for cn)
 function classNames(...classes) {
   return classes.filter(Boolean).join(" ");
 }

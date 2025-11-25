@@ -36,9 +36,7 @@ function Navbar() {
   );
 }
 
-/* -------------------------
-   Minimal Dashboard Page
-   ------------------------- */
+
 export default function DashboardPage() {
   return (
     <div className="relative min-h-screen bg-[#030303] text-white overflow-hidden">

@@ -8,14 +8,12 @@ import { HoverBorderGradient } from "./components/heroButton";
 const Page = () => {
   return (
     <div className="relative w-full h-screen overflow-hidden">
-      {/* Hero section */}
       <HeroGeometric
         badge="LearnSphere – AI Study Companion"
         title1="Simplify Learning with Intelligence"
         title2=""
       />
 
-      {/* Button overlay with delayed fade-in */}
       <motion.div
         className="absolute inset-0 flex justify-center items-center translate-y-60"
         initial={{ opacity: 0, y: 20 }}
