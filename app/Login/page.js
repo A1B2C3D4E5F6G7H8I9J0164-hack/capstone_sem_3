@@ -11,9 +11,8 @@ export default function LoginSignup() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Handle OAuth callback
   useEffect(() => {
-    if (typeof window === "undefined") return; // Skip on server
+    if (typeof window === "undefined") return; 
     
     try {
       const token = searchParams?.get("token");
@@ -26,21 +25,17 @@ export default function LoginSignup() {
       } else if (error) {
         setErrorPopup("OAuth authentication failed. Please try again.");
         setTimeout(() => setErrorPopup(""), 3000);
-        // Clean URL
         router.replace("/Login");
       }
     } catch (err) {
-      // Silently handle any searchParams errors
       console.error("Error reading search params:", err);
     }
   }, [searchParams, router]);
 
-  // Google OAuth handler
   function handleGoogleAuth() {
     window.location.href = "https://capstone-backend-3-jthr.onrender.com/api/auth/google";
   }
 
-  // 🩵 LOGIN HANDLER
   async function handleLogin(e) {
     e.preventDefault();
     setLoading(true);
