@@ -359,6 +359,7 @@ export default function DashboardPage() {
         if (data && data.summary && data.summary.trim()) {
           console.log("Summary received successfully, length:", data.summary.length);
           setSummary(data.summary);
+          await fetchEnergyGraphData(); // Refresh energy graph after summary
         } else {
           console.error("Empty summary received:", data);
           setSummary("Summary generated successfully, but no content was returned. Please try again.");
@@ -396,18 +397,18 @@ export default function DashboardPage() {
     const sentences = clean.split(/(?<=[.!?])\s+/).filter(Boolean);
     const keyPoints = clean
       .split(/[.,;:]/)
-      .map((s) => s.trim())
+        .map((s) => s.trim())
       .filter((s) => s.length > 10)
       .slice(0, 5);
 
     const summary = [
       sentences.slice(0, 2).join(" ") || clean.slice(0, 200),
-      "",
+        "",
       "Key Points:",
       ...keyPoints.map((point, idx) => `${idx + 1}. ${point}`),
-    ]
-      .filter(Boolean)
-      .join("\n");
+      ]
+        .filter(Boolean)
+        .join("\n");
 
     return summary;
   };
@@ -439,9 +440,10 @@ export default function DashboardPage() {
       if (res.ok) {
         const data = await res.json();
         setOverview((prev) => [...prev, { label: data.label, value: data.value, id: data._id }]);
-        setNewOverviewLabel("");
-        setNewOverviewValue("");
+    setNewOverviewLabel("");
+    setNewOverviewValue("");
         updateStreak();
+        await fetchEnergyGraphData(); // Refresh energy graph
       } else {
         const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
         console.error("Error creating overview:", errorData);
@@ -466,9 +468,9 @@ export default function DashboardPage() {
           "Content-Type": "application/json" 
         },
         body: JSON.stringify({
-          title: newScheduleTitle.trim(),
-          time: newScheduleTime.trim() || "Custom",
-          detail: newScheduleDetail.trim() || "Tap to edit details",
+        title: newScheduleTitle.trim(),
+        time: newScheduleTime.trim() || "Custom",
+        detail: newScheduleDetail.trim() || "Tap to edit details",
         }),
       });
       
@@ -482,8 +484,8 @@ export default function DashboardPage() {
             detail: scheduleData.detail,
             id: scheduleData._id,
             taskId: null, // Will be set after task creation
-          },
-        ]);
+      },
+    ]);
 
         // Create corresponding task for today
         const today = new Date();
@@ -531,9 +533,9 @@ export default function DashboardPage() {
         await fetchPendingTasks();
         await fetchEnergyGraphData();
 
-        setNewScheduleTitle("");
-        setNewScheduleTime("");
-        setNewScheduleDetail("");
+    setNewScheduleTitle("");
+    setNewScheduleTime("");
+    setNewScheduleDetail("");
         updateStreak();
       } else {
         const errorData = await scheduleRes.json().catch(() => ({ message: "Unknown error" }));
@@ -633,9 +635,9 @@ export default function DashboardPage() {
           "Content-Type": "application/json" 
         },
         body: JSON.stringify({
-          title: newMilestoneTitle.trim(),
-          detail: newMilestoneDetail.trim() || "Details coming soon",
-          state: newMilestoneState.trim() || "Planned",
+        title: newMilestoneTitle.trim(),
+        detail: newMilestoneDetail.trim() || "Details coming soon",
+        state: newMilestoneState.trim() || "Planned",
         }),
       });
       
@@ -648,12 +650,13 @@ export default function DashboardPage() {
             detail: data.detail,
             state: data.state,
             id: data._id,
-          },
-        ]);
-        setNewMilestoneTitle("");
-        setNewMilestoneDetail("");
-        setNewMilestoneState("");
+      },
+    ]);
+    setNewMilestoneTitle("");
+    setNewMilestoneDetail("");
+    setNewMilestoneState("");
         updateStreak();
+        await fetchEnergyGraphData(); // Refresh energy graph
       } else {
         const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
         console.error("Error creating milestone:", errorData);
@@ -826,10 +829,13 @@ export default function DashboardPage() {
             <div className="mt-2 overflow-x-auto">
               <div className="flex items-end gap-4 h-40 min-w-[26rem]">
                 {energyGraphData.length > 0 ? (
-                  energyGraphData.map(({ day, total, completed, pending, date }) => {
-                    // Calculate percentage based on completed tasks (max 10 tasks = 100%)
-                    const maxTasks = 10;
-                    const percentage = Math.min((completed / maxTasks) * 100, 100);
+                  energyGraphData.map(({ day, total, completed, pending, activities, date }) => {
+                    // Calculate percentage based on total activities (tasks + activities)
+                    // Use activities count if available, otherwise use total
+                    const activityCount = activities || 0;
+                    const totalCount = total || activityCount;
+                    const maxCount = 15; // Increased max to accommodate more activities
+                    const percentage = Math.min((totalCount / maxCount) * 100, 100);
                     const isHovered = hoveredDay === day;
                     
                     return (
@@ -843,9 +849,12 @@ export default function DashboardPage() {
                         {isHovered && (
                           <div className="absolute bottom-full mb-2 px-3 py-2 rounded-lg bg-black/90 border border-white/20 backdrop-blur-md z-10 whitespace-nowrap">
                             <p className="text-xs font-semibold text-white mb-1">{day}</p>
-                            <p className="text-xs text-white/80">Total: {total} tasks</p>
-                            <p className="text-xs text-emerald-400">Completed: {completed}</p>
-                            <p className="text-xs text-rose-400">Pending: {pending}</p>
+                            <p className="text-xs text-white/80">Total Activities: {totalCount}</p>
+                            {activities > 0 && (
+                              <p className="text-xs text-purple-400">Actions: {activities}</p>
+                            )}
+                            <p className="text-xs text-emerald-400">Completed: {completed || 0}</p>
+                            <p className="text-xs text-rose-400">Pending: {pending || 0}</p>
                             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-black/90 border-r border-b border-white/20 rotate-45"></div>
                           </div>
                         )}
@@ -861,12 +870,16 @@ export default function DashboardPage() {
                           {completed > 0 && (
                             <div className="absolute inset-x-0 bottom-0 h-1 bg-emerald-400/80"></div>
                           )}
+                          {/* Activity indicator */}
+                          {activities > 0 && (
+                            <div className="absolute inset-x-0 bottom-0 h-1 bg-purple-400/80" style={{ bottom: completed > 0 ? '4px' : '0' }}></div>
+                          )}
                         </div>
                         <span className={`text-xs transition ${isHovered ? "text-white font-semibold" : "text-white/60"}`}>
                           {day}
                         </span>
-                        {total > 0 && (
-                          <span className="text-[10px] text-white/40 mt-[-4px]">{total}</span>
+                        {totalCount > 0 && (
+                          <span className="text-[10px] text-white/40 mt-[-4px]">{totalCount}</span>
                         )}
                       </div>
                     );
@@ -874,24 +887,24 @@ export default function DashboardPage() {
                 ) : (
                   // Fallback to static data if no API data
                   streakData.map(({ day, hours, target }) => {
-                    const percentage = Math.min((hours / target) * 100, 100);
-                    return (
-                      <div key={day} className="flex flex-col items-center gap-2 text-sm">
-                        <div className="relative w-10 h-32 rounded-2xl bg-white/5 overflow-hidden border border-white/10">
-                          <div className="absolute inset-x-0 bottom-0" style={{ height: `${percentage}%` }}>
-                            <div className="h-full w-full bg-gradient-to-t from-indigo-500 via-purple-500 to-pink-400" />
-                          </div>
+                  const percentage = Math.min((hours / target) * 100, 100);
+                  return (
+                    <div key={day} className="flex flex-col items-center gap-2 text-sm">
+                      <div className="relative w-10 h-32 rounded-2xl bg-white/5 overflow-hidden border border-white/10">
+                        <div className="absolute inset-x-0 bottom-0" style={{ height: `${percentage}%` }}>
+                          <div className="h-full w-full bg-gradient-to-t from-indigo-500 via-purple-500 to-pink-400" />
                         </div>
-                        <span className="text-xs text-white/60">{day}</span>
                       </div>
-                    );
+                      <span className="text-xs text-white/60">{day}</span>
+                    </div>
+                  );
                   })
                 )}
               </div>
             </div>
             <div className="flex items-center justify-between text-xs text-white/50">
-              <p>Hover to see task details</p>
-              <p>{energyGraphData.reduce((sum, day) => sum + day.completed, 0)} completed this week</p>
+              <p>Hover to see activity details</p>
+              <p>{energyGraphData.reduce((sum, day) => sum + (day.activities || 0), 0)} activities this week</p>
             </div>
           </motion.div>
         </section>
@@ -1200,7 +1213,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between text-sm text-white/60">
                     <span>{time}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs uppercase tracking-[0.3em] text-white/40">slot</span>
+                    <span className="text-xs uppercase tracking-[0.3em] text-white/40">slot</span>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleCompleteSchedule(id, taskId)}
@@ -1354,9 +1367,9 @@ export default function DashboardPage() {
                   <span>Generating summary with AI...</span>
                 </div>
               ) : (
-                <pre className="whitespace-pre-wrap text-sm text-white/80 leading-relaxed">
-                  {summary || "Your condensed insights will appear here right after the AI finishes crafting them."}
-                </pre>
+              <pre className="whitespace-pre-wrap text-sm text-white/80 leading-relaxed">
+                {summary || "Your condensed insights will appear here right after the AI finishes crafting them."}
+              </pre>
               )}
             </div>
           </motion.div>
