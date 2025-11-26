@@ -102,172 +102,255 @@ export default function DashboardPage() {
   // API base URL
   const API_BASE = "https://capstone-backend-3-jthr.onrender.com/api";
 
-  // Function to get auth headers
+  // Function to get auth headers with error handling
   const getAuthHeaders = () => {
     if (typeof window === "undefined") return {};
     const token = localStorage.getItem("token");
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    if (!token) {
+      // Redirect to login if no token found
+      window.location.href = '/login';
+      return {};
+    }
+    return { 
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    };
+  };
+
+  // Handle API errors including 401 unauthorized
+  const handleApiError = (error, context = '') => {
+    console.error(`Error ${context}:`, error);
+    if (error.status === 401) {
+      // Clear invalid token and redirect to login
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return null;
+  };
+
+  // Wrapper for fetch with auth and error handling
+  const fetchWithAuth = async (url, options = {}) => {
+    try {
+      const headers = getAuthHeaders();
+      if (Object.keys(headers).length === 0) return null; // Already handled by getAuthHeaders
+
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...headers,
+          ...(options.headers || {})
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          handleApiError({ status: 401 }, `Unauthorized access to ${url}`);
+          return null;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      return handleApiError(error, `fetching ${url}`);
+    }
   };
 
   // Load streak data from backend
   const fetchStreak = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/dashboard/streak`, {
-        headers: getAuthHeaders(),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCurrentStreak(data.currentStreak || 0);
-        setMaxStreak(data.maxStreak || 0);
-        setLastActivityDate(data.lastActivityDate || null);
-      }
-    } catch (err) {
-      console.error("Error fetching streak:", err);
+    const data = await fetchWithAuth(`${API_BASE}/dashboard/streak`);
+    if (data) {
+      setCurrentStreak(data.currentStreak || 0);
+      setMaxStreak(data.maxStreak || 0);
+      setLastActivityDate(data.lastActivityDate || null);
     }
   };
 
   // Function to update streak when user opens/edits something
   const updateStreak = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/dashboard/streak/update`, {
-        method: "POST",
-        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCurrentStreak(data.currentStreak || 0);
-        setMaxStreak(data.maxStreak || 0);
-        setLastActivityDate(data.lastActivityDate || null);
-      }
-    } catch (err) {
-      console.error("Error updating streak:", err);
+    const data = await fetchWithAuth(`${API_BASE}/dashboard/streak/update`, {
+      method: "POST"
+    });
+    if (data) {
+      setCurrentStreak(data.currentStreak || 0);
+      setMaxStreak(data.maxStreak || 0);
+      setLastActivityDate(data.lastActivityDate || null);
     }
   };
 
   // Fetch milestones from backend
   const fetchMilestones = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/dashboard/milestones`, {
-        headers: getAuthHeaders(),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.length > 0) {
-          setMilestones(data.map((m) => ({
-            title: m.title,
-            detail: m.detail,
-            state: m.state,
-            id: m._id,
-          })));
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching milestones:", err);
+    const data = await fetchWithAuth(`${API_BASE}/dashboard/milestones`);
+    if (data && data.length > 0) {
+      setMilestones(data.map((m) => ({
+        title: m.title,
+        detail: m.detail,
+        state: m.state,
+        id: m._id,
+      })));
     }
   };
 
   // Fetch overview from backend
   const fetchOverview = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/dashboard/overview`, {
-        headers: getAuthHeaders(),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.length > 0) {
-          setOverview(data.map((o) => ({
-            label: o.label,
-            value: o.value,
-            id: o._id,
-          })));
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching overview:", err);
+    const data = await fetchWithAuth(`${API_BASE}/dashboard/overview`);
+    if (data && data.length > 0) {
+      setOverview(data.map((o) => ({
+        label: o.label,
+        value: o.value,
+        id: o._id,
+      })));
     }
   };
 
   // Fetch schedules from backend
   const fetchSchedules = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/dashboard/schedules`, {
-        headers: getAuthHeaders(),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.length > 0) {
-          // Fetch tasks to match with schedules
-          const tasksRes = await fetch(`${API_BASE}/dashboard/tasks?status=pending`, {
-            headers: getAuthHeaders(),
-          });
-          let tasks = [];
-          if (tasksRes.ok) {
-            tasks = await tasksRes.json();
-          }
+    const data = await fetchWithAuth(`${API_BASE}/dashboard/schedules`);
+    if (!data) return;
+    
+    // Fetch tasks to match with schedules
+    const tasksData = await fetchWithAuth(`${API_BASE}/dashboard/tasks?status=pending`);
+    const tasks = tasksData || [];
 
-          setScheduleItems(data.map((s) => ({
-            title: s.title,
-            time: s.time,
-            detail: s.detail,
-            id: s._id,
-            taskId: s.taskId || null,
-          })));
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching schedules:", err);
-    }
+    // Map schedules and include related task details if taskId exists
+    const scheduleItems = data.map((s) => {
+      const relatedTask = tasks.find(t => t._id === s.taskId);
+      return {
+        title: s.title,
+        time: s.time,
+        detail: s.detail,
+        id: s._id,
+        taskId: s.taskId || null,
+        task: relatedTask ? {
+          title: relatedTask.title,
+          status: relatedTask.status,
+          priority: relatedTask.priority
+        } : null
+      };
+    });
+
+    setScheduleItems(scheduleItems);
   };
 
   // Fetch pending tasks for today
   const fetchPendingTasks = async () => {
     try {
+      const headers = getAuthHeaders();
+      if (!headers.Authorization) {
+        console.warn("No token found, skipping pending tasks fetch");
+        return;
+      }
+      
       const res = await fetch(`${API_BASE}/dashboard/tasks/pending-today`, {
-        headers: getAuthHeaders(),
+        headers: headers,
       });
+      
       if (res.ok) {
         const data = await res.json();
         const count = data.count || 0;
         console.log("Pending tasks count updated:", count);
         setPendingTasksCount(count);
         setPendingTasks(data.tasks || []);
+      } else if (res.status === 401) {
+        console.warn("Unauthorized - token may be expired or invalid");
+        // Don't show error to user, just log it
+        setPendingTasksCount(0);
+        setPendingTasks([]);
       } else {
         console.error("Failed to fetch pending tasks:", res.status);
+        setPendingTasksCount(0);
+        setPendingTasks([]);
       }
     } catch (err) {
       console.error("Error fetching pending tasks:", err);
+      setPendingTasksCount(0);
+      setPendingTasks([]);
     }
   };
 
   // Fetch energy graph data (tasks by week)
   const fetchEnergyGraphData = async () => {
     try {
-      const res = await fetch(`${API_BASE}/dashboard/tasks/week`, {
-        headers: getAuthHeaders(),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setEnergyGraphData(data);
+      console.log("Fetching energy graph data...");
+      const headers = getAuthHeaders();
+      if (!headers.Authorization) {
+        console.warn("No token found, using sample data for energy graph");
+        // Use sample data for demonstration
+        const sampleData = [
+          { day: 'Mon', total: 5, completed: 3, pending: 2, activities: 2 },
+          { day: 'Tue', total: 8, completed: 5, pending: 3, activities: 3 },
+          { day: 'Wed', total: 3, completed: 2, pending: 1, activities: 1 },
+          { day: 'Thu', total: 6, completed: 4, pending: 2, activities: 2 },
+          { day: 'Fri', total: 7, completed: 5, pending: 2, activities: 1 },
+          { day: 'Sat', total: 2, completed: 1, pending: 1, activities: 0 },
+          { day: 'Sun', total: 1, completed: 0, pending: 1, activities: 0 },
+        ];
+        setEnergyGraphData(sampleData);
+        return;
+      }
+      
+      console.log("Making API request to:", `${API_BASE}/dashboard/tasks/week`);
+      const response = await fetchWithAuth(`${API_BASE}/dashboard/tasks/week`);
+      console.log("API Response:", response);
+      
+      if (response && Array.isArray(response)) {
+        console.log("Setting energy graph data:", response);
+        setEnergyGraphData(response);
+      } else {
+        console.warn("Unexpected response format, using sample data");
+        // Use sample data if API response is not as expected
+        const sampleData = [
+          { day: 'Mon', total: 5, completed: 3, pending: 2, activities: 2 },
+          { day: 'Tue', total: 8, completed: 5, pending: 3, activities: 3 },
+          { day: 'Wed', total: 3, completed: 2, pending: 1, activities: 1 },
+          { day: 'Thu', total: 6, completed: 4, pending: 2, activities: 2 },
+          { day: 'Fri', total: 7, completed: 5, pending: 2, activities: 1 },
+          { day: 'Sat', total: 2, completed: 1, pending: 1, activities: 0 },
+          { day: 'Sun', total: 1, completed: 0, pending: 1, activities: 0 },
+        ];
+        setEnergyGraphData(sampleData);
       }
     } catch (err) {
-      console.error("Error fetching energy graph data:", err);
+      console.error("Error in fetchEnergyGraphData:", err);
+      // Use sample data on error
+      const sampleData = [
+        { day: 'Mon', total: 5, completed: 3, pending: 2, activities: 2 },
+        { day: 'Tue', total: 8, completed: 5, pending: 3, activities: 3 },
+        { day: 'Wed', total: 3, completed: 2, pending: 1, activities: 1 },
+        { day: 'Thu', total: 6, completed: 4, pending: 2, activities: 2 },
+        { day: 'Fri', total: 7, completed: 5, pending: 2, activities: 1 },
+        { day: 'Sat', total: 2, completed: 1, pending: 1, activities: 0 },
+        { day: 'Sun', total: 1, completed: 0, pending: 1, activities: 0 },
+      ];
+      setEnergyGraphData(sampleData);
     }
   };
 
   // Load all data on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
+    
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token) {
+      console.warn("No token found, redirecting to login");
+      return;
+    }
+    
+    // Set loading state
+    setEnergyGraphData(prev => (Array.isArray(prev) && prev.length > 0 ? prev : null));
 
     const loadData = async () => {
-      await fetchStreak();
-      await fetchMilestones();
-      await fetchOverview();
-      await fetchSchedules();
-      await fetchPendingTasks();
-      await fetchEnergyGraphData();
-      await updateStreak(); // Update streak when opening dashboard
+      try {
+        await fetchStreak();
+        await fetchMilestones();
+        await fetchOverview();
+        await fetchSchedules();
+        await fetchPendingTasks();
+        await fetchEnergyGraphData();
+        await updateStreak(); // Update streak when opening dashboard
+      } catch (err) {
+        console.error("Error loading dashboard data:", err);
+      }
     };
 
     loadData();
@@ -400,7 +483,6 @@ export default function DashboardPage() {
         .map((s) => s.trim())
       .filter((s) => s.length > 10)
       .slice(0, 5);
-
     const summary = [
       sentences.slice(0, 2).join(" ") || clean.slice(0, 200),
         "",
@@ -457,25 +539,27 @@ export default function DashboardPage() {
 
   const handleAddSchedule = async () => {
     if (!newScheduleTitle.trim()) return;
-    
+  
     try {
       const headers = getAuthHeaders();
+  
       // Create schedule
       const scheduleRes = await fetch(`${API_BASE}/dashboard/schedules`, {
         method: "POST",
-        headers: { 
-          ...headers, 
-          "Content-Type": "application/json" 
+        headers: {
+          ...headers,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-        title: newScheduleTitle.trim(),
-        time: newScheduleTime.trim() || "Custom",
-        detail: newScheduleDetail.trim() || "Tap to edit details",
+          title: newScheduleTitle.trim(),
+          time: newScheduleTime.trim() || "Custom",
+          detail: newScheduleDetail.trim() || "Tap to edit details",
         }),
       });
-      
+  
       if (scheduleRes.ok) {
         const scheduleData = await scheduleRes.json();
+  
         setScheduleItems((prev) => [
           ...prev,
           {
@@ -483,70 +567,82 @@ export default function DashboardPage() {
             time: scheduleData.time,
             detail: scheduleData.detail,
             id: scheduleData._id,
-            taskId: null, // Will be set after task creation
-      },
-    ]);
-
-        // Create corresponding task for today
+            taskId: null,
+          },
+        ]);
+  
+        // Create corresponding task
         const today = new Date();
-        const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
-        
+        const endOfToday = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate(),
+          23, 59, 59, 999
+        );
+  
         const taskRes = await fetch(`${API_BASE}/dashboard/tasks`, {
           method: "POST",
-          headers: { 
-            ...headers, 
-            "Content-Type": "application/json" 
+          headers: {
+            ...headers,
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             title: newScheduleTitle.trim(),
-            description: newScheduleDetail.trim() || scheduleData.detail || "Tap to edit details",
+            description:
+              newScheduleDetail.trim() ||
+              scheduleData.detail ||
+              "Tap to edit details",
             dueDate: endOfToday.toISOString(),
             status: "pending",
             priority: "medium",
           }),
         });
-
+  
         if (taskRes.ok) {
           const taskData = await taskRes.json();
-          
-          // Update schedule with taskId in backend
+  
+          // Attach task to schedule
           await fetch(`${API_BASE}/dashboard/schedules/${scheduleData._id}`, {
             method: "PUT",
-            headers: { 
-              ...headers, 
-              "Content-Type": "application/json" 
+            headers: {
+              ...headers,
+              "Content-Type": "application/json",
             },
             body: JSON.stringify({ taskId: taskData._id }),
           });
-
-          // Update the schedule item with task ID in state
+  
+          // Update state
           setScheduleItems((prev) =>
             prev.map((item) =>
-              item.id === scheduleData._id ? { ...item, taskId: taskData._id } : item
+              item.id === scheduleData._id
+                ? { ...item, taskId: taskData._id }
+                : item
             )
           );
-        } else {
-          console.error("Failed to create task for schedule");
         }
-        
-        // Always refresh pending tasks count and energy graph after schedule creation
+  
         await fetchPendingTasks();
         await fetchEnergyGraphData();
-
-    setNewScheduleTitle("");
-    setNewScheduleTime("");
-    setNewScheduleDetail("");
+  
+        setNewScheduleTitle("");
+        setNewScheduleTime("");
+        setNewScheduleDetail("");
+  
         updateStreak();
       } else {
-        const errorData = await scheduleRes.json().catch(() => ({ message: "Unknown error" }));
-        console.error("Error creating schedule:", errorData);
-        alert(`Failed to create schedule: ${errorData.message || "Unknown error"}`);
+        const errorData = await scheduleRes.json().catch(() => ({
+          message: "Unknown error",
+        }));
+        alert(`Failed to create schedule: ${errorData.message}`);
       }
     } catch (err) {
       console.error("Error creating schedule:", err);
-      alert(`Network error: ${err.message}. Please check your connection and try again.`);
+      alert(
+        `Network error: ${err.message}. Please check your connection and try again.`
+      );
     }
   };
+  
 
   const handleDeleteSchedule = async (scheduleId, taskId) => {
     if (!confirm("Are you sure you want to delete this schedule?")) return;
@@ -826,16 +922,52 @@ export default function DashboardPage() {
               <p className="text-xs uppercase tracking-[0.3em] text-white/50">Energy Graph</p>
               <Clock4 className="h-5 w-5 text-white/60" />
             </div>
-            <div className="mt-2 overflow-x-auto">
-              <div className="flex items-end gap-4 h-40 min-w-[26rem]">
-                {energyGraphData.length > 0 ? (
-                  energyGraphData.map(({ day, total, completed, pending, activities, date }) => {
-                    // Calculate percentage based on total activities (tasks + activities)
-                    // Use activities count if available, otherwise use total
-                    const activityCount = activities || 0;
-                    const totalCount = total || activityCount;
-                    const maxCount = 15; // Increased max to accommodate more activities
-                    const percentage = Math.min((totalCount / maxCount) * 100, 100);
+            <div className="mt-2 overflow-x-auto relative">
+              {/* Activity indicator lines */}
+              <div className="absolute left-0 right-0 top-0 bottom-0 flex flex-col justify-between pointer-events-none">
+                {[0, 25, 50, 75, 100].map((percent) => (
+                  <div 
+                    key={percent} 
+                    className="w-full border-t border-white/5"
+                    style={{ marginTop: percent === 0 ? 0 : 'auto' }}
+                  >
+                    {percent > 0 && (
+                      <span className="absolute left-2 text-[10px] text-white/30 -translate-y-1/2">
+                        {100 - percent}%
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-end gap-4 h-40 min-w-[26rem] pb-1 relative z-10">
+                {energyGraphData === null ? (
+                  // Loading state
+                  Array(7).fill(0).map((_, i) => (
+                    <div key={`loading-${i}`} className="flex flex-col items-center gap-2 text-sm h-full">
+                      <div className="relative w-10 h-full rounded-2xl bg-white/5 overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-t from-gray-700/50 via-gray-600/50 to-gray-500/50 animate-pulse"></div>
+                      </div>
+                      <div className="h-4 w-8 bg-gray-700/50 rounded animate-pulse"></div>
+                    </div>
+                  ))
+                ) : Array.isArray(energyGraphData) && energyGraphData.length > 0 ? (
+                  energyGraphData.map((item) => {
+                    // Ensure we have the expected properties
+                    const day = item.day || '';
+                    const total = item.total || 0;
+                    const completed = item.completed || 0;
+                    const pending = item.pending || 0;
+                    const activities = item.activities || 0;
+                    
+                    // Calculate heights
+                    const maxValue = Math.max(1, ...energyGraphData.map(d => 
+                      Math.max(d.total || 0, d.activities || 0, d.completed || 0, d.pending || 0)
+                    ));
+                    
+                    const totalHeight = Math.min((total / maxValue) * 90, 90);
+                    const completedHeight = total > 0 ? (completed / total) * 100 : 0;
+                    const activitiesHeight = total > 0 ? (activities / total) * 100 : 0;
+                    
                     const isHovered = hoveredDay === day;
                     
                     return (
@@ -845,66 +977,176 @@ export default function DashboardPage() {
                         onMouseEnter={() => setHoveredDay(day)}
                         onMouseLeave={() => setHoveredDay(null)}
                       >
-                        {/* Tooltip */}
+                        {/* Enhanced Tooltip with boundary detection */}
                         {isHovered && (
-                          <div className="absolute bottom-full mb-2 px-3 py-2 rounded-lg bg-black/90 border border-white/20 backdrop-blur-md z-10 whitespace-nowrap">
-                            <p className="text-xs font-semibold text-white mb-1">{day}</p>
-                            <p className="text-xs text-white/80">Total Activities: {totalCount}</p>
-                            {activities > 0 && (
-                              <p className="text-xs text-purple-400">Actions: {activities}</p>
-                            )}
-                            <p className="text-xs text-emerald-400">Completed: {completed || 0}</p>
-                            <p className="text-xs text-rose-400">Pending: {pending || 0}</p>
-                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-black/90 border-r border-b border-white/20 rotate-45"></div>
+                          <div 
+                            className="absolute bottom-full mb-3 px-3 py-2.5 rounded-lg bg-gray-900/95 border border-white/10 backdrop-blur-md z-20 shadow-xl shadow-black/30 min-w-[180px]"
+                            style={{
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              // Add viewport boundary detection
+                              left: 'calc(50% + var(--tooltip-offset, 0px))',
+                              '--tooltip-offset': '0px', // Will be set by JS
+                            }}
+                            ref={(el) => {
+                              if (!el) return;
+                              // Check if tooltip is outside viewport
+                              const rect = el.getBoundingClientRect();
+                              const viewportWidth = window.innerWidth;
+                              
+                              if (rect.right > viewportWidth - 10) {
+                                // If tooltip is too far right, shift it left
+                                const overflow = rect.right - viewportWidth + 10;
+                                el.style.setProperty('--tooltip-offset', `-${overflow}px`);
+                              } else if (rect.left < 10) {
+                                // If tooltip is too far left, shift it right
+                                const overflow = 10 - rect.left;
+                                el.style.setProperty('--tooltip-offset', `${overflow}px`);
+                              }
+                            }}
+                          >
+                            <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-white/10">
+                              <p className="text-sm font-semibold text-white">{day}</p>
+                              <div className="flex items-center space-x-1.5">
+                                <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-indigo-500/20 text-indigo-300">
+                                  {total} total
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-gray-300 flex items-center">
+                                  <span className="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span>
+                                  Completed
+                                </span>
+                                <span className="text-xs font-medium text-white">{completed || 0}</span>
+                              </div>
+                              
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-gray-300 flex items-center">
+                                  <span className="w-2 h-2 rounded-full bg-rose-400 mr-1.5"></span>
+                                  Pending
+                                </span>
+                                <span className="text-xs font-medium text-white">{pending || 0}</span>
+                              </div>
+                              
+                              {activities > 0 && (
+                                <div className="pt-1.5 mt-1.5 border-t border-white/5">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs text-purple-300 flex items-center">
+                                      <span className="w-2 h-2 rounded-full bg-purple-400 mr-1.5"></span>
+                                      Activities
+                                    </span>
+                                    <span className="text-xs font-medium text-white">{activities}</span>
+                                  </div>
+                                  {activities > 0 && (
+                                    <div className="mt-1.5 pt-1.5 border-t border-white/5">
+                                      <p className="text-[11px] text-gray-400 font-medium mb-1">Recent:</p>
+                                      <div className="space-y-1">
+                                        {Array(Math.min(activities, 2)).fill(0).map((_, i) => (
+                                          <div key={i} className="flex items-center">
+                                            <span className="w-1 h-1 rounded-full bg-purple-400 mr-2"></span>
+                                            <span className="text-xs text-gray-300 truncate">
+                                              Activity {i + 1} completed
+                                            </span>
+                                          </div>
+                                        ))}
+                                        {activities > 2 && (
+                                          <p className="text-[10px] text-gray-500 text-right">+{activities - 2} more</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-gray-900/95 border-b border-r border-white/10 rotate-45"></div>
                           </div>
                         )}
                         
-                        <div className="relative w-10 h-32 rounded-2xl bg-white/5 overflow-hidden border border-white/10 hover:border-indigo-400/50 transition">
-                          <div 
-                            className="absolute inset-x-0 bottom-0 transition-all duration-300" 
-                            style={{ height: `${Math.max(percentage, 5)}%` }}
-                          >
-                            <div className="h-full w-full bg-gradient-to-t from-indigo-500 via-purple-500 to-pink-400" />
+                        <div 
+                          className="relative w-10 h-full rounded-2xl bg-white/5 overflow-hidden border border-white/10 hover:border-indigo-400/50 transition-all duration-300 group"
+                          onMouseEnter={() => setHoveredDay(day)}
+                          onMouseLeave={() => setHoveredDay(null)}
+                        >
+                          {/* Activity indicator lines */}
+                          <div className="absolute inset-0 flex flex-col justify-between">
+                            {[25, 50, 75].map((line) => (
+                              <div 
+                                key={line}
+                                className="w-full border-t border-white/5"
+                                style={{ marginTop: 'auto' }}
+                              ></div>
+                            ))}
                           </div>
-                          {/* Completed tasks indicator */}
+                          
+                          {/* Main bar */}
+                          <div 
+                            className="absolute inset-x-0 bottom-0 transition-all duration-500 ease-out" 
+                            style={{ 
+                              height: `${Math.max(totalHeight, 10)}%`,
+                              background: 'linear-gradient(to top, #8b5cf6 0%, #ec4899 100%)',
+                              opacity: 0.8,
+                              transition: 'height 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+                            }}
+                          >
+                            {/* Inner gradient for depth */}
+                            <div 
+                              className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20"
+                              style={{
+                                maskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
+                                WebkitMaskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
+                              }}
+                            />
+                          </div>
+                          
+                          {/* Completed tasks overlay */}
                           {completed > 0 && (
-                            <div className="absolute inset-x-0 bottom-0 h-1 bg-emerald-400/80"></div>
+                            <div 
+                              className="absolute inset-x-0 bottom-0 bg-emerald-400/80 transition-all duration-300"
+                              style={{ 
+                                height: `${completedHeight}%`,
+                                borderTopLeftRadius: '0.5rem',
+                                borderTopRightRadius: '0.5rem',
+                              }}
+                            ></div>
                           )}
+                          
                           {/* Activity indicator */}
                           {activities > 0 && (
-                            <div className="absolute inset-x-0 bottom-0 h-1 bg-purple-400/80" style={{ bottom: completed > 0 ? '4px' : '0' }}></div>
+                            <div 
+                              className="absolute inset-x-0 bottom-0 bg-purple-400/80 transition-all duration-300"
+                              style={{ 
+                                height: '4px',
+                                bottom: '2px',
+                                borderBottomLeftRadius: '0.25rem',
+                                borderBottomRightRadius: '0.25rem',
+                              }}
+                            ></div>
                           )}
                         </div>
                         <span className={`text-xs transition ${isHovered ? "text-white font-semibold" : "text-white/60"}`}>
                           {day}
                         </span>
-                        {totalCount > 0 && (
-                          <span className="text-[10px] text-white/40 mt-[-4px]">{totalCount}</span>
+                        {total > 0 && (
+                          <span className="text-[10px] text-white/40 mt-[-4px]">{total}</span>
                         )}
                       </div>
                     );
                   })
                 ) : (
-                  // Fallback to static data if no API data
-                  streakData.map(({ day, hours, target }) => {
-                  const percentage = Math.min((hours / target) * 100, 100);
-                  return (
-                    <div key={day} className="flex flex-col items-center gap-2 text-sm">
-                      <div className="relative w-10 h-32 rounded-2xl bg-white/5 overflow-hidden border border-white/10">
-                        <div className="absolute inset-x-0 bottom-0" style={{ height: `${percentage}%` }}>
-                          <div className="h-full w-full bg-gradient-to-t from-indigo-500 via-purple-500 to-pink-400" />
-                        </div>
-                      </div>
-                      <span className="text-xs text-white/60">{day}</span>
-                    </div>
-                  );
-                  })
+                  // Empty state
+                  <div className="w-full flex items-center justify-center h-32">
+                    <p className="text-white/60">No activity data available for this week</p>
+                  </div>
                 )}
               </div>
             </div>
             <div className="flex items-center justify-between text-xs text-white/50">
               <p>Hover to see activity details</p>
-              <p>{energyGraphData.reduce((sum, day) => sum + (day.activities || 0), 0)} activities this week</p>
+              <p>{energyGraphData ? energyGraphData.reduce((sum, day) => sum + (day.activities || 0), 0) : 0} activities this week</p>
             </div>
           </motion.div>
         </section>
