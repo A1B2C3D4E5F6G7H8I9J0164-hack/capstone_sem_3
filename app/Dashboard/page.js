@@ -309,11 +309,15 @@ export default function DashboardPage() {
     }
     
     setIsSummarizing(true);
+    setSummary(""); // Clear previous summary
     updateStreak();
     
     try {
       const headers = getAuthHeaders();
-      const res = await fetch(`${API_BASE}/ai/summarize`, {
+      const url = `${API_BASE}/ai/summarize`;
+      console.log("Calling AI summarize endpoint:", url);
+      
+      const res = await fetch(url, {
         method: "POST",
         headers: { 
           ...headers, 
@@ -322,19 +326,90 @@ export default function DashboardPage() {
         body: JSON.stringify({ notes: notes.trim() }),
       });
       
+      console.log("Response status:", res.status);
+      console.log("Response headers:", res.headers.get("content-type"));
+      
+      // Check if response is JSON
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        // Try to read as text to see what we got
+        const textResponse = await res.text();
+        console.error("Non-JSON response received:", textResponse.substring(0, 200));
+        
+        if (res.status === 404) {
+          setSummary(`⚠️ AI endpoint not found. The backend may not be deployed with the latest changes.\n\nFallback Summary:\n\n${generateFallbackSummary(notes)}`);
+        } else {
+          setSummary(`⚠️ Server returned HTML instead of JSON. Status: ${res.status}\n\nThis usually means the route doesn't exist or the backend needs to be redeployed.\n\nFallback Summary:\n\n${generateFallbackSummary(notes)}`);
+        }
+        return;
+      }
+      
+      let data;
+      try {
+        data = await res.json();
+      } catch (parseError) {
+        console.error("Failed to parse JSON response:", parseError);
+        const textResponse = await res.text();
+        console.error("Response body:", textResponse.substring(0, 500));
+        setSummary(`Error: Invalid JSON response from server. Status: ${res.status}\n\nFallback Summary:\n\n${generateFallbackSummary(notes)}`);
+        return;
+      }
+      
       if (res.ok) {
-        const data = await res.json();
-        setSummary(data.summary || "Summary generated successfully.");
+        if (data && data.summary && data.summary.trim()) {
+          console.log("Summary received successfully, length:", data.summary.length);
+          setSummary(data.summary);
+        } else {
+          console.error("Empty summary received:", data);
+          setSummary("Summary generated successfully, but no content was returned. Please try again.");
+        }
       } else {
-        const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
-        setSummary(`Error: ${errorData.message || "Failed to generate summary. Please try again."}`);
+        // Try to parse error response
+        let errorMessage = "Failed to generate summary. Please try again.";
+        if (data && data.message) {
+          errorMessage = data.message;
+        } else if (res.statusText) {
+          errorMessage = res.statusText;
+        }
+        
+        console.error("API Error:", res.status, errorMessage);
+        
+        // If API is not configured, provide a fallback summary
+        if (res.status === 503) {
+          setSummary(`⚠️ AI service is not configured.\n\nFallback Summary:\n\n${generateFallbackSummary(notes)}`);
+        } else {
+          setSummary(`Error: ${errorMessage}\n\nPlease check your connection or try again later.`);
+        }
       }
     } catch (err) {
       console.error("Error generating summary:", err);
-      setSummary(`Network error: ${err.message}. Please check your connection and try again.`);
+      // Provide fallback summary on network errors
+      setSummary(`⚠️ Network error: Unable to connect to AI service.\n\nFallback Summary:\n\n${generateFallbackSummary(notes)}`);
     } finally {
       setIsSummarizing(false);
     }
+  };
+
+  // Fallback summary generator when AI is unavailable
+  const generateFallbackSummary = (text) => {
+    const clean = text.replace(/\s+/g, " ").trim();
+    const sentences = clean.split(/(?<=[.!?])\s+/).filter(Boolean);
+    const keyPoints = clean
+      .split(/[.,;:]/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 10)
+      .slice(0, 5);
+
+    const summary = [
+      sentences.slice(0, 2).join(" ") || clean.slice(0, 200),
+      "",
+      "Key Points:",
+      ...keyPoints.map((point, idx) => `${idx + 1}. ${point}`),
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    return summary;
   };
 
   const handleShuffleOverview = () => {
@@ -1273,9 +1348,16 @@ export default function DashboardPage() {
 
             <div className="rounded-2xl border border-white/10 bg-black/40 p-4 min-h-[140px]">
               <p className="text-xs uppercase tracking-[0.3em] text-white/40 mb-2">AI Summary</p>
-              <pre className="whitespace-pre-wrap text-sm text-white/80 leading-relaxed">
-                {summary || "Your condensed insights will appear here right after the AI finishes crafting them."}
-              </pre>
+              {isSummarizing ? (
+                <div className="flex items-center gap-2 text-sm text-white/60">
+                  <div className="h-4 w-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                  <span>Generating summary with AI...</span>
+                </div>
+              ) : (
+                <pre className="whitespace-pre-wrap text-sm text-white/80 leading-relaxed">
+                  {summary || "Your condensed insights will appear here right after the AI finishes crafting them."}
+                </pre>
+              )}
             </div>
           </motion.div>
         </section>
