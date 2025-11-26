@@ -21,6 +21,7 @@ import {
   Settings,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
+import HeroBackground from "../components/HeroBackground";
 
 const achievements = [
   {
@@ -163,9 +164,9 @@ export default function ProfilePage() {
   ];
 
   return (
-    <div className="relative min-h-screen bg-[#030303] text-white overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(121,80,255,0.2),_transparent_60%)]" />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/60 to-black/90" />
+    <div className="relative min-h-screen bg-[#030303] dark:bg-[#030303] bg-white text-white dark:text-white overflow-hidden">
+      <HeroBackground />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/60 to-black/90 dark:from-black/40 dark:via-black/60 dark:to-black/90" />
 
       <Navbar />
 

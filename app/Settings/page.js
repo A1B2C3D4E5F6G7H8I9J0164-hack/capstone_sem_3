@@ -17,8 +17,11 @@ import {
   EyeOff,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
+import HeroBackground from "../components/HeroBackground";
+import { useTheme } from "../components/ThemeProvider";
 
 export default function SettingsPage() {
+  const { theme, toggleTheme } = useTheme();
   const [user, setUser] = useState({
     name: "",
     email: "",
@@ -26,7 +29,6 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState({
     notifications: true,
     emailNotifications: true,
-    darkMode: true,
     language: "en",
   });
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -92,9 +94,9 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#030303] text-white overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(121,80,255,0.25),_transparent_60%)]" />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/70 to-black/95" />
+    <div className="relative min-h-screen bg-[#030303] dark:bg-[#030303] bg-white text-white dark:text-white overflow-hidden">
+      <HeroBackground />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/70 to-black/95 dark:from-black/30 dark:via-black/70 dark:to-black/95" />
 
       <Navbar />
 
@@ -280,19 +282,26 @@ export default function SettingsPage() {
             </h2>
             <div className="space-y-4">
               <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/30 px-5 py-4">
-                <div>
-                  <p className="font-medium">Dark Mode</p>
-                  <p className="text-sm text-white/60">Use dark theme</p>
+                <div className="flex items-center gap-3">
+                  {theme === "dark" ? (
+                    <Moon className="h-5 w-5 text-indigo-400" />
+                  ) : (
+                    <Sun className="h-5 w-5 text-amber-400" />
+                  )}
+                  <div>
+                    <p className="font-medium">Dark Mode</p>
+                    <p className="text-sm text-white/60">Toggle between light and dark theme</p>
+                  </div>
                 </div>
                 <button
-                  onClick={() => setSettings({ ...settings, darkMode: !settings.darkMode })}
+                  onClick={toggleTheme}
                   className={`relative w-14 h-8 rounded-full transition ${
-                    settings.darkMode ? "bg-indigo-500" : "bg-white/20"
+                    theme === "dark" ? "bg-indigo-500" : "bg-amber-500"
                   }`}
                 >
                   <div
                     className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full transition ${
-                      settings.darkMode ? "translate-x-6" : ""
+                      theme === "dark" ? "translate-x-6" : ""
                     }`}
                   />
                 </button>

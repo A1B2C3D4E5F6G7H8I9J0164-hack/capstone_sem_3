@@ -17,6 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import Navbar from "../components/Navbar";
+import HeroBackground from "../components/HeroBackground";
 
 const streakData = [
   { day: "Mon", hours: 3.5, target: 4 },
@@ -77,6 +78,10 @@ export default function DashboardPage() {
   const [pendingTasks, setPendingTasks] = useState([]);
   const [isPendingTasksOpen, setIsPendingTasksOpen] = useState(false);
   const [isStreakDetailsOpen, setIsStreakDetailsOpen] = useState(false);
+
+  // Energy graph data
+  const [energyGraphData, setEnergyGraphData] = useState([]);
+  const [hoveredDay, setHoveredDay] = useState(null);
 
   // Inline form state
   const [newOverviewLabel, setNewOverviewLabel] = useState("");
@@ -234,6 +239,21 @@ export default function DashboardPage() {
     }
   };
 
+  // Fetch energy graph data (tasks by week)
+  const fetchEnergyGraphData = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/dashboard/tasks/week`, {
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEnergyGraphData(data);
+      }
+    } catch (err) {
+      console.error("Error fetching energy graph data:", err);
+    }
+  };
+
   // Load all data on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -246,6 +266,7 @@ export default function DashboardPage() {
       await fetchOverview();
       await fetchSchedules();
       await fetchPendingTasks();
+      await fetchEnergyGraphData();
       await updateStreak(); // Update streak when opening dashboard
     };
 
@@ -281,34 +302,39 @@ export default function DashboardPage() {
     return `${m}:${s}`;
   }, [remainingSeconds, focusMinutes]);
 
-  const handleSummarize = () => {
+  const handleSummarize = async () => {
     if (!notes.trim()) {
       setSummary("Add some notes first so I can craft a summary for you.");
       return;
     }
+    
     setIsSummarizing(true);
     updateStreak();
-    setTimeout(() => {
-      const clean = notes.replace(/\s+/g, " ").trim();
-      const snippets = clean.split(/(?<=[.!?])\s+/).filter(Boolean);
-      const bullets = clean
-        .split(/,|\./)
-        .map((s) => s.trim())
-        .filter((s) => s.length > 5)
-        .slice(0, 3);
-
-      const generated = [
-        snippets.slice(0, 2).join(" ") || clean.slice(0, 160),
-        "",
-        "Key takeaways:",
-        ...bullets.map((item, idx) => `${idx + 1}. ${item}`),
-      ]
-        .filter(Boolean)
-        .join("\n");
-
-      setSummary(generated);
+    
+    try {
+      const headers = getAuthHeaders();
+      const res = await fetch(`${API_BASE}/ai/summarize`, {
+        method: "POST",
+        headers: { 
+          ...headers, 
+          "Content-Type": "application/json" 
+        },
+        body: JSON.stringify({ notes: notes.trim() }),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setSummary(data.summary || "Summary generated successfully.");
+      } else {
+        const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
+        setSummary(`Error: ${errorData.message || "Failed to generate summary. Please try again."}`);
+      }
+    } catch (err) {
+      console.error("Error generating summary:", err);
+      setSummary(`Network error: ${err.message}. Please check your connection and try again.`);
+    } finally {
       setIsSummarizing(false);
-    }, 900);
+    }
   };
 
   const handleShuffleOverview = () => {
@@ -426,8 +452,9 @@ export default function DashboardPage() {
           console.error("Failed to create task for schedule");
         }
         
-        // Always refresh pending tasks count after schedule creation
+        // Always refresh pending tasks count and energy graph after schedule creation
         await fetchPendingTasks();
+        await fetchEnergyGraphData();
 
         setNewScheduleTitle("");
         setNewScheduleTime("");
@@ -468,8 +495,9 @@ export default function DashboardPage() {
         // Remove from state
         setScheduleItems((prev) => prev.filter((item) => item.id !== scheduleId));
         
-        // Refresh pending tasks count
+        // Refresh pending tasks count and energy graph
         await fetchPendingTasks();
+        await fetchEnergyGraphData();
       } else {
         const errorData = await scheduleRes.json().catch(() => ({ message: "Unknown error" }));
         alert(`Failed to delete schedule: ${errorData.message || "Unknown error"}`);
@@ -501,8 +529,9 @@ export default function DashboardPage() {
           // Remove schedule from list (or mark as completed visually)
           setScheduleItems((prev) => prev.filter((item) => item.id !== scheduleId));
           
-          // Refresh pending tasks count
+          // Refresh pending tasks count and energy graph
           await fetchPendingTasks();
+          await fetchEnergyGraphData();
         } else {
           const errorData = await taskRes.json().catch(() => ({ message: "Unknown error" }));
           alert(`Failed to complete task: ${errorData.message || "Unknown error"}`);
@@ -648,9 +677,9 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="relative min-h-screen bg-[#030303] text-white overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(121,80,255,0.25),_transparent_60%)]" />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/70 to-black/95" />
+    <div className="relative min-h-screen bg-[#030303] dark:bg-[#030303] bg-white text-white dark:text-white overflow-hidden">
+      <HeroBackground />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/70 to-black/95 dark:from-black/30 dark:via-black/70 dark:to-black/95" />
 
       <Navbar />
 
@@ -721,24 +750,73 @@ export default function DashboardPage() {
             </div>
             <div className="mt-2 overflow-x-auto">
               <div className="flex items-end gap-4 h-40 min-w-[26rem]">
-                {streakData.map(({ day, hours, target }) => {
-                  const percentage = Math.min((hours / target) * 100, 100);
-                  return (
-                    <div key={day} className="flex flex-col items-center gap-2 text-sm">
-                      <div className="relative w-10 h-32 rounded-2xl bg-white/5 overflow-hidden border border-white/10">
-                        <div className="absolute inset-x-0 bottom-0" style={{ height: `${percentage}%` }}>
-                          <div className="h-full w-full bg-gradient-to-t from-indigo-500 via-purple-500 to-pink-400" />
+                {energyGraphData.length > 0 ? (
+                  energyGraphData.map(({ day, total, completed, pending, date }) => {
+                    // Calculate percentage based on completed tasks (max 10 tasks = 100%)
+                    const maxTasks = 10;
+                    const percentage = Math.min((completed / maxTasks) * 100, 100);
+                    const isHovered = hoveredDay === day;
+                    
+                    return (
+                      <div
+                        key={day}
+                        className="flex flex-col items-center gap-2 text-sm relative group"
+                        onMouseEnter={() => setHoveredDay(day)}
+                        onMouseLeave={() => setHoveredDay(null)}
+                      >
+                        {/* Tooltip */}
+                        {isHovered && (
+                          <div className="absolute bottom-full mb-2 px-3 py-2 rounded-lg bg-black/90 border border-white/20 backdrop-blur-md z-10 whitespace-nowrap">
+                            <p className="text-xs font-semibold text-white mb-1">{day}</p>
+                            <p className="text-xs text-white/80">Total: {total} tasks</p>
+                            <p className="text-xs text-emerald-400">Completed: {completed}</p>
+                            <p className="text-xs text-rose-400">Pending: {pending}</p>
+                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-black/90 border-r border-b border-white/20 rotate-45"></div>
+                          </div>
+                        )}
+                        
+                        <div className="relative w-10 h-32 rounded-2xl bg-white/5 overflow-hidden border border-white/10 hover:border-indigo-400/50 transition">
+                          <div 
+                            className="absolute inset-x-0 bottom-0 transition-all duration-300" 
+                            style={{ height: `${Math.max(percentage, 5)}%` }}
+                          >
+                            <div className="h-full w-full bg-gradient-to-t from-indigo-500 via-purple-500 to-pink-400" />
+                          </div>
+                          {/* Completed tasks indicator */}
+                          {completed > 0 && (
+                            <div className="absolute inset-x-0 bottom-0 h-1 bg-emerald-400/80"></div>
+                          )}
                         </div>
+                        <span className={`text-xs transition ${isHovered ? "text-white font-semibold" : "text-white/60"}`}>
+                          {day}
+                        </span>
+                        {total > 0 && (
+                          <span className="text-[10px] text-white/40 mt-[-4px]">{total}</span>
+                        )}
                       </div>
-                      <span className="text-xs text-white/60">{day}</span>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                ) : (
+                  // Fallback to static data if no API data
+                  streakData.map(({ day, hours, target }) => {
+                    const percentage = Math.min((hours / target) * 100, 100);
+                    return (
+                      <div key={day} className="flex flex-col items-center gap-2 text-sm">
+                        <div className="relative w-10 h-32 rounded-2xl bg-white/5 overflow-hidden border border-white/10">
+                          <div className="absolute inset-x-0 bottom-0" style={{ height: `${percentage}%` }}>
+                            <div className="h-full w-full bg-gradient-to-t from-indigo-500 via-purple-500 to-pink-400" />
+                          </div>
+                        </div>
+                        <span className="text-xs text-white/60">{day}</span>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
             <div className="flex items-center justify-between text-xs text-white/50">
-              <p>Goal: 5h avg / day</p>
-              <p>+18% vs last week</p>
+              <p>Hover to see task details</p>
+              <p>{energyGraphData.reduce((sum, day) => sum + day.completed, 0)} completed this week</p>
             </div>
           </motion.div>
         </section>
