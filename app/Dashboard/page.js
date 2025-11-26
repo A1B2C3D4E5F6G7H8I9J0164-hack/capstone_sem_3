@@ -4,10 +4,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  Home,
-  User,
-  Settings,
-  LogOut,
   Sparkles,
   Upload,
   Target,
@@ -17,7 +13,10 @@ import {
   ListPlus,
   MapPin,
   Edit3,
+  Check,
+  Trash2,
 } from "lucide-react";
+import Navbar from "../components/Navbar";
 
 const streakData = [
   { day: "Mon", hours: 3.5, target: 4 },
@@ -49,36 +48,6 @@ const milestoneCards = [
   { title: "Mentor Review", detail: "Dec 08 · Remote", state: "Scheduled" },
 ];
 
-function Navbar() {
-  return (
-    <motion.nav
-      initial={{ y: -30, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }} 
-      transition={{ duration: 0.6 }}
-      className="fixed z-50 top-4 left-1/2 -translate-x-1/2 w-[92%] md:w-[80%] flex items-center justify-between px-6 py-3 rounded-full backdrop-blur-md bg-white/5 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.6)]"
-    >
-      <div className="flex items-center gap-3">
-        <div className="h-3 w-3 rounded-full bg-indigo-400" />
-        <span className="text-white font-semibold tracking-wide">LearnSphere AI</span>
-      </div>
-
-      <div className="flex items-center gap-6 text-white/70">
-        <Link href="/Dashboard" className="flex items-center gap-2 hover:text-white transition">
-          <Home className="h-4 w-4" /> <span className="hidden sm:inline">Home</span>
-        </Link>
-        <Link href="/Profile" className="flex items-center gap-2 hover:text-white transition">
-          <User className="h-4 w-4" /> <span className="hidden sm:inline">Profile</span>
-        </Link>
-        <button className="flex items-center gap-2 hover:text-white transition">
-          <Settings className="h-4 w-4" /> <span className="hidden sm:inline">Settings</span>
-        </button>
-        <button className="flex items-center gap-2 hover:text-rose-400 transition">
-          <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Logout</span>
-        </button>
-      </div>
-    </motion.nav>
-  );
-}
 
 export default function DashboardPage() {
   const [notes, setNotes] = useState("");
@@ -222,11 +191,21 @@ export default function DashboardPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.length > 0) {
+          // Fetch tasks to match with schedules
+          const tasksRes = await fetch(`${API_BASE}/dashboard/tasks?status=pending`, {
+            headers: getAuthHeaders(),
+          });
+          let tasks = [];
+          if (tasksRes.ok) {
+            tasks = await tasksRes.json();
+          }
+
           setScheduleItems(data.map((s) => ({
             title: s.title,
             time: s.time,
             detail: s.detail,
             id: s._id,
+            taskId: s.taskId || null,
           })));
         }
       }
@@ -243,8 +222,12 @@ export default function DashboardPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setPendingTasksCount(data.count || 0);
+        const count = data.count || 0;
+        console.log("Pending tasks count updated:", count);
+        setPendingTasksCount(count);
         setPendingTasks(data.tasks || []);
+      } else {
+        console.error("Failed to fetch pending tasks:", res.status);
       }
     } catch (err) {
       console.error("Error fetching pending tasks:", err);
@@ -374,7 +357,8 @@ export default function DashboardPage() {
     
     try {
       const headers = getAuthHeaders();
-      const res = await fetch(`${API_BASE}/dashboard/schedules`, {
+      // Create schedule
+      const scheduleRes = await fetch(`${API_BASE}/dashboard/schedules`, {
         method: "POST",
         headers: { 
           ...headers, 
@@ -387,28 +371,148 @@ export default function DashboardPage() {
         }),
       });
       
-      if (res.ok) {
-        const data = await res.json();
+      if (scheduleRes.ok) {
+        const scheduleData = await scheduleRes.json();
         setScheduleItems((prev) => [
           ...prev,
           {
-            title: data.title,
-            time: data.time,
-            detail: data.detail,
-            id: data._id,
+            title: scheduleData.title,
+            time: scheduleData.time,
+            detail: scheduleData.detail,
+            id: scheduleData._id,
+            taskId: null, // Will be set after task creation
           },
         ]);
+
+        // Create corresponding task for today
+        const today = new Date();
+        const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+        
+        const taskRes = await fetch(`${API_BASE}/dashboard/tasks`, {
+          method: "POST",
+          headers: { 
+            ...headers, 
+            "Content-Type": "application/json" 
+          },
+          body: JSON.stringify({
+            title: newScheduleTitle.trim(),
+            description: newScheduleDetail.trim() || scheduleData.detail || "Tap to edit details",
+            dueDate: endOfToday.toISOString(),
+            status: "pending",
+            priority: "medium",
+          }),
+        });
+
+        if (taskRes.ok) {
+          const taskData = await taskRes.json();
+          
+          // Update schedule with taskId in backend
+          await fetch(`${API_BASE}/dashboard/schedules/${scheduleData._id}`, {
+            method: "PUT",
+            headers: { 
+              ...headers, 
+              "Content-Type": "application/json" 
+            },
+            body: JSON.stringify({ taskId: taskData._id }),
+          });
+
+          // Update the schedule item with task ID in state
+          setScheduleItems((prev) =>
+            prev.map((item) =>
+              item.id === scheduleData._id ? { ...item, taskId: taskData._id } : item
+            )
+          );
+        } else {
+          console.error("Failed to create task for schedule");
+        }
+        
+        // Always refresh pending tasks count after schedule creation
+        await fetchPendingTasks();
+
         setNewScheduleTitle("");
         setNewScheduleTime("");
         setNewScheduleDetail("");
         updateStreak();
       } else {
-        const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
+        const errorData = await scheduleRes.json().catch(() => ({ message: "Unknown error" }));
         console.error("Error creating schedule:", errorData);
         alert(`Failed to create schedule: ${errorData.message || "Unknown error"}`);
       }
     } catch (err) {
       console.error("Error creating schedule:", err);
+      alert(`Network error: ${err.message}. Please check your connection and try again.`);
+    }
+  };
+
+  const handleDeleteSchedule = async (scheduleId, taskId) => {
+    if (!confirm("Are you sure you want to delete this schedule?")) return;
+
+    try {
+      const headers = getAuthHeaders();
+      
+      // Delete schedule
+      const scheduleRes = await fetch(`${API_BASE}/dashboard/schedules/${scheduleId}`, {
+        method: "DELETE",
+        headers: headers,
+      });
+
+      if (scheduleRes.ok) {
+        // Delete corresponding task if it exists
+        if (taskId) {
+          await fetch(`${API_BASE}/dashboard/tasks/${taskId}`, {
+            method: "DELETE",
+            headers: headers,
+          });
+        }
+
+        // Remove from state
+        setScheduleItems((prev) => prev.filter((item) => item.id !== scheduleId));
+        
+        // Refresh pending tasks count
+        await fetchPendingTasks();
+      } else {
+        const errorData = await scheduleRes.json().catch(() => ({ message: "Unknown error" }));
+        alert(`Failed to delete schedule: ${errorData.message || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error("Error deleting schedule:", err);
+      alert(`Network error: ${err.message}. Please check your connection and try again.`);
+    }
+  };
+
+  const handleCompleteSchedule = async (scheduleId, taskId) => {
+    try {
+      const headers = getAuthHeaders();
+      
+      // Update task status to completed if task exists
+      if (taskId) {
+        const taskRes = await fetch(`${API_BASE}/dashboard/tasks/${taskId}`, {
+          method: "PUT",
+          headers: { 
+            ...headers, 
+            "Content-Type": "application/json" 
+          },
+          body: JSON.stringify({
+            status: "completed",
+          }),
+        });
+
+        if (taskRes.ok) {
+          // Remove schedule from list (or mark as completed visually)
+          setScheduleItems((prev) => prev.filter((item) => item.id !== scheduleId));
+          
+          // Refresh pending tasks count
+          await fetchPendingTasks();
+        } else {
+          const errorData = await taskRes.json().catch(() => ({ message: "Unknown error" }));
+          alert(`Failed to complete task: ${errorData.message || "Unknown error"}`);
+        }
+      } else {
+        // If no task, just remove the schedule
+        setScheduleItems((prev) => prev.filter((item) => item.id !== scheduleId));
+      }
+    } catch (err) {
+      console.error("Error completing schedule:", err);
       alert(`Network error: ${err.message}. Please check your connection and try again.`);
     }
   };
@@ -938,11 +1042,29 @@ export default function DashboardPage() {
               </button>
             </div>
             <div className="space-y-3">
-              {scheduleItems.map(({ title, time, detail, id }, idx) => (
+              {scheduleItems.map(({ title, time, detail, id, taskId }, idx) => (
                 <div key={id || `${title}-${idx}`} className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
                   <div className="flex items-center justify-between text-sm text-white/60">
                     <span>{time}</span>
-                    <span className="text-xs uppercase tracking-[0.3em] text-white/40">slot</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs uppercase tracking-[0.3em] text-white/40">slot</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleCompleteSchedule(id, taskId)}
+                          className="p-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 transition"
+                          title="Mark as done"
+                        >
+                          <Check className="h-4 w-4 text-emerald-300" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSchedule(id, taskId)}
+                          className="p-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 transition"
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4 text-rose-300" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                   <p className="mt-2 text-lg font-medium">{title}</p>
                   <p className="text-sm text-white/60">{detail}</p>
