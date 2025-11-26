@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
+  Activity,
   Sparkles,
   Upload,
   Target,
@@ -915,39 +916,70 @@ export default function DashboardPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/10 via-white/5 to-transparent backdrop-blur-xl p-6 space-y-4"
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-20 rounded-2xl bg-gradient-to-br from-black/80 via-black to-gray-900/90 border border-white/5 shadow-2xl shadow-black/50 p-5 space-y-5 backdrop-blur-md"
           >
-            <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-[0.3em] text-white/50">Energy Graph</p>
-              <Clock4 className="h-5 w-5 text-white/60" />
+            <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+              <div className="flex items-center space-x-2">
+                <Activity className="h-4 w-4 text-white/80" />
+                <p className="text-sm font-medium text-white/90">Activity Overview</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/70">
+                <span className="flex items-center">
+                  <span className="w-2 h-2 rounded-full bg-white/90 mr-1.5"></span>
+                  <span className="text-white/80">Completed</span>
+                </span>
+                <span className="hidden sm:inline text-white/30">•</span>
+                <span className="flex items-center">
+                  <span className="w-2 h-2 rounded-full bg-white/50 mr-1.5"></span>
+                  <span className="text-white/60">Pending</span>
+                </span>
+              </div>
             </div>
-            <div className="mt-2 overflow-x-auto relative">
-              {/* Activity indicator lines */}
-              <div className="absolute left-0 right-0 top-0 bottom-0 flex flex-col justify-between pointer-events-none">
-                {[0, 25, 50, 75, 100].map((percent) => (
+            
+            <div className="relative h-48 -mx-1">
+              {/* Background grid */}
+              <div className="absolute inset-0 grid grid-cols-7 h-full">
+                {[...Array(7)].map((_, i) => (
+                  <div key={i} className="border-r border-white/[0.03] last:border-r-0"></div>
+                ))}
+              </div>
+              
+              {/* Horizontal lines */}
+              <div className="absolute inset-0 flex flex-col justify-between">
+                {[0, 25, 50, 75, 100].map((percent, i) => (
                   <div 
-                    key={percent} 
-                    className="w-full border-t border-white/5"
-                    style={{ marginTop: percent === 0 ? 0 : 'auto' }}
+                    key={i}
+                    className="relative h-px w-full"
+                    style={{ 
+                      marginTop: i === 0 ? 0 : 'auto',
+                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.03) 10%, rgba(255,255,255,0.03) 90%, transparent)'
+                    }}
                   >
                     {percent > 0 && (
-                      <span className="absolute left-2 text-[10px] text-white/30 -translate-y-1/2">
-                        {100 - percent}%
+                      <span className="absolute left-1 text-[10px] text-white/20 -translate-y-1/2 select-none">
+                        {100 - percent}
                       </span>
                     )}
                   </div>
                 ))}
               </div>
-              <div className="flex items-end gap-4 h-40 min-w-[26rem] pb-1 relative z-10">
+              
+              {/* Graph bars */}
+              <div className="relative h-full flex items-end justify-between px-1">
                 {energyGraphData === null ? (
                   // Loading state
                   Array(7).fill(0).map((_, i) => (
-                    <div key={`loading-${i}`} className="flex flex-col items-center gap-2 text-sm h-full">
-                      <div className="relative w-10 h-full rounded-2xl bg-white/5 overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-t from-gray-700/50 via-gray-600/50 to-gray-500/50 animate-pulse"></div>
-                      </div>
-                      <div className="h-4 w-8 bg-gray-700/50 rounded animate-pulse"></div>
+                    <div 
+                      key={`loading-${i}`} 
+                      className="h-full w-8 relative group"
+                      style={{
+                        '--delay': `${i * 0.1}s`,
+                        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        animationDelay: `var(--delay, 0s)`,
+                      }}
+                    >
+                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-gray-800/30 to-gray-700/20 rounded-t-lg"></div>
                     </div>
                   ))
                 ) : Array.isArray(energyGraphData) && energyGraphData.length > 0 ? (
@@ -973,42 +1005,19 @@ export default function DashboardPage() {
                     return (
                       <div
                         key={day}
-                        className="flex flex-col items-center gap-2 text-sm relative group"
+                        className="flex-1 flex flex-col items-center h-full relative group"
                         onMouseEnter={() => setHoveredDay(day)}
                         onMouseLeave={() => setHoveredDay(null)}
                       >
-                        {/* Enhanced Tooltip with boundary detection */}
+                        {/* Tooltip below bar with high z-index */}
                         {isHovered && (
                           <div 
-                            className="absolute bottom-full mb-3 px-3 py-2.5 rounded-lg bg-gray-900/95 border border-white/10 backdrop-blur-md z-20 shadow-xl shadow-black/30 min-w-[180px]"
-                            style={{
-                              left: '50%',
-                              transform: 'translateX(-50%)',
-                              // Add viewport boundary detection
-                              left: 'calc(50% + var(--tooltip-offset, 0px))',
-                              '--tooltip-offset': '0px', // Will be set by JS
-                            }}
-                            ref={(el) => {
-                              if (!el) return;
-                              // Check if tooltip is outside viewport
-                              const rect = el.getBoundingClientRect();
-                              const viewportWidth = window.innerWidth;
-                              
-                              if (rect.right > viewportWidth - 10) {
-                                // If tooltip is too far right, shift it left
-                                const overflow = rect.right - viewportWidth + 10;
-                                el.style.setProperty('--tooltip-offset', `-${overflow}px`);
-                              } else if (rect.left < 10) {
-                                // If tooltip is too far left, shift it right
-                                const overflow = 10 - rect.left;
-                                el.style.setProperty('--tooltip-offset', `${overflow}px`);
-                              }
-                            }}
+                            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-2 rounded-lg bg-gradient-to-b from-black/95 to-gray-900/95 border border-white/10 backdrop-blur-md z-50 shadow-xl shadow-black/40 w-40 text-sm"
                           >
                             <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-white/10">
                               <p className="text-sm font-semibold text-white">{day}</p>
                               <div className="flex items-center space-x-1.5">
-                                <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-indigo-500/20 text-indigo-300">
+                                <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-white/10 text-white/80">
                                   {total} total
                                 </span>
                               </div>
@@ -1040,66 +1049,89 @@ export default function DashboardPage() {
                                     </span>
                                     <span className="text-xs font-medium text-white">{activities}</span>
                                   </div>
-                                  {activities > 0 && (
-                                    <div className="mt-1.5 pt-1.5 border-t border-white/5">
-                                      <p className="text-[11px] text-gray-400 font-medium mb-1">Recent:</p>
-                                      <div className="space-y-1">
-                                        {Array(Math.min(activities, 2)).fill(0).map((_, i) => (
-                                          <div key={i} className="flex items-center">
-                                            <span className="w-1 h-1 rounded-full bg-purple-400 mr-2"></span>
-                                            <span className="text-xs text-gray-300 truncate">
-                                              Activity {i + 1} completed
-                                            </span>
-                                          </div>
-                                        ))}
-                                        {activities > 2 && (
-                                          <p className="text-[10px] text-gray-500 text-right">+{activities - 2} more</p>
-                                        )}
-                                      </div>
+                                  <div className="mt-1.5 pt-1.5 border-t border-white/5">
+                                    <p className="text-[11px] text-gray-400 font-medium mb-1">Recent:</p>
+                                    <div className="space-y-1">
+                                      {Array(Math.min(activities, 2)).fill(0).map((_, i) => (
+                                        <div key={i} className="flex items-center">
+                                          <span className="w-1 h-1 rounded-full bg-purple-400 mr-2"></span>
+                                          <span className="text-xs text-gray-300 truncate">
+                                            Activity {i + 1} completed
+                                          </span>
+                                        </div>
+                                      ))}
+                                      {activities > 2 && (
+                                        <p className="text-[10px] text-gray-500 text-right">+{activities - 2} more</p>
+                                      )}
                                     </div>
-                                  )}
+                                  </div>
                                 </div>
                               )}
                             </div>
                             
-                            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-gray-900/95 border-b border-r border-white/10 rotate-45"></div>
+                            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-black/95 border-t border-l border-white/10 -rotate-45 -z-10"></div>
                           </div>
                         )}
-                        
-                        <div 
-                          className="relative w-10 h-full rounded-2xl bg-white/5 overflow-hidden border border-white/10 hover:border-indigo-400/50 transition-all duration-300 group"
-                          onMouseEnter={() => setHoveredDay(day)}
-                          onMouseLeave={() => setHoveredDay(null)}
-                        >
-                          {/* Activity indicator lines */}
-                          <div className="absolute inset-0 flex flex-col justify-between">
-                            {[25, 50, 75].map((line) => (
-                              <div 
-                                key={line}
-                                className="w-full border-t border-white/5"
-                                style={{ marginTop: 'auto' }}
-                              ></div>
-                            ))}
-                          </div>
-                          
-                          {/* Main bar */}
+
+                        <div className="relative w-full h-full flex items-end justify-center group" style={{ minWidth: '28px' }}>
+                          {/* Bar container */}
                           <div 
-                            className="absolute inset-x-0 bottom-0 transition-all duration-500 ease-out" 
-                            style={{ 
-                              height: `${Math.max(totalHeight, 10)}%`,
-                              background: 'linear-gradient(to top, #8b5cf6 0%, #ec4899 100%)',
-                              opacity: 0.8,
-                              transition: 'height 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+                            className="relative w-6 mx-auto transition-all duration-300 group-hover:w-7"
+                            style={{
+                              height: `${Math.max(totalHeight, 5)}%`,
+                              transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
                             }}
                           >
-                            {/* Inner gradient for depth */}
-                            <div 
-                              className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20"
-                              style={{
-                                maskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
-                                WebkitMaskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
-                              }}
-                            />
+                            {/* Bar background */}
+                            <div className="absolute inset-0 bg-black/20 rounded-t-lg overflow-hidden border border-white/5 transition-all duration-200 group-hover:border-white/10">
+                              {/* Pending tasks */}
+                              {pending > 0 && (
+                                <div 
+                                  className="absolute bottom-0 left-0 right-0 bg-rose-500/20 transition-all duration-300"
+                                  style={{
+                                    height: `${(pending / total) * 100}%`,
+                                    borderTop: '1px solid rgba(236, 72, 153, 0.2)'
+                                  }}
+                                ></div>
+                              )}
+                              
+                              {/* Completed tasks */}
+                              <div 
+                                className="absolute bottom-0 left-0 right-0 bg-gradient-to-b from-white/90 to-white/70 transition-all duration-300"
+                                style={{
+                                  height: `${(completed / total) * 100}%`,
+                                  borderTopLeftRadius: '0.5rem',
+                                  borderTopRightRadius: '0.5rem',
+                                  boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.1)'
+                                }}
+                              >
+                                {/* Shine effect */}
+                                <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-20"></div>
+                              </div>
+                              
+                              {/* Activity indicator */}
+                              {activities > 0 && (
+                                <div 
+                                  className="absolute -bottom-px left-0 right-0 h-0.5 bg-purple-400/90 transition-all duration-300 group-hover:bg-purple-300"
+                                  style={{
+                                    bottom: `${(activities / total) * 100}%`,
+                                    boxShadow: '0 0 8px rgba(168, 85, 247, 0.4)'
+                                  }}
+                                ></div>
+                              )}
+                            </div>
+                            
+                            {/* Hover effect */}
+                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent rounded-t-lg"></div>
+                            </div>
+                          </div>
+                          
+                          {/* Day label */}
+                          <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-full text-center">
+                            <span className="text-[10px] font-medium text-white/40 group-hover:text-white/70 transition-colors select-none">
+                              {day.slice(0, 1)}
+                            </span>
                           </div>
                           
                           {/* Completed tasks overlay */}
@@ -1127,26 +1159,40 @@ export default function DashboardPage() {
                             ></div>
                           )}
                         </div>
-                        <span className={`text-xs transition ${isHovered ? "text-white font-semibold" : "text-white/60"}`}>
-                          {day}
-                        </span>
-                        {total > 0 && (
-                          <span className="text-[10px] text-white/40 mt-[-4px]">{total}</span>
-                        )}
                       </div>
                     );
                   })
                 ) : (
                   // Empty state
-                  <div className="w-full flex items-center justify-center h-32">
-                    <p className="text-white/60">No activity data available for this week</p>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3">
+                    <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center">
+                      <Activity className="h-5 w-5 text-white/30" />
+                    </div>
+                    <p className="text-sm text-white/60 text-center max-w-[200px]">
+                      No activity data available for this week
+                    </p>
                   </div>
                 )}
               </div>
+              
+              {/* X-axis labels */}
+              <div className="flex justify-between px-0.5 mt-1">
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                  <div key={i} className="w-7 text-center">
+                    <span className="text-[10px] text-white/30 select-none">{day}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center justify-between text-xs text-white/50">
-              <p>Hover to see activity details</p>
-              <p>{energyGraphData ? energyGraphData.reduce((sum, day) => sum + (day.activities || 0), 0) : 0} activities this week</p>
+            
+            <div className="flex items-center justify-between text-xs pt-1">
+              <div className="flex items-center space-x-2 text-white/50">
+                <Activity className="h-3 w-3 text-white/60" />
+                <span className="text-white/70">Weekly Activity</span>
+              </div>
+              <div className="text-white/50 font-medium">
+                {energyGraphData ? energyGraphData.reduce((sum, day) => sum + (day.activities || 0), 0) : 0} activities
+              </div>
             </div>
           </motion.div>
         </section>
