@@ -27,6 +27,8 @@ export default function NotesPage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("createdAt_desc");
   const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [createForm, setCreateForm] = useState({
@@ -38,6 +40,8 @@ export default function NotesPage() {
 
   const [quizQuestions, setQuizQuestions] = useState([]);
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const [quizResult, setQuizResult] = useState(null);
 
   // Redirect to Login if no token
   useEffect(() => {
@@ -60,6 +64,8 @@ export default function NotesPage() {
       const params = new URLSearchParams();
       if (search.trim()) params.set("q", search.trim());
       if (sort) params.set("sort", sort);
+      params.set("page", String(page));
+      params.set("limit", "10");
 
       const res = await fetch(`${API_BASE}/notes?${params.toString()}`, {
         headers,
@@ -72,9 +78,12 @@ export default function NotesPage() {
       }
 
       const data = await res.json();
-      setNotes(Array.isArray(data) ? data : []);
-      if (data.length > 0 && !selectedNoteId) {
-        setSelectedNoteId(data[0]._id);
+      const items = Array.isArray(data.notes) ? data.notes : [];
+      setNotes(items);
+      setPage(data.page || 1);
+      setTotalPages(data.totalPages || 1);
+      if (items.length > 0 && !selectedNoteId) {
+        setSelectedNoteId(items[0]._id);
       }
     } catch (err) {
       console.error("Error fetching notes:", err);
@@ -86,10 +95,11 @@ export default function NotesPage() {
   useEffect(() => {
     fetchNotes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sort]);
+  }, [sort, page]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
+    setPage(1);
     fetchNotes();
   };
 
@@ -125,6 +135,7 @@ export default function NotesPage() {
       setNotes((prev) => [newNote, ...prev]);
       setSelectedNoteId(newNote._id);
       setCreateForm({ title: "", subject: "", tags: "", content: "" });
+      setIsCreateOpen(false);
     } catch (err) {
       console.error("Error creating note:", err);
       alert("Network error while creating note");
@@ -143,13 +154,15 @@ export default function NotesPage() {
     try {
       setIsGeneratingQuiz(true);
       setQuizQuestions([]);
+      setQuizAnswers({});
+      setQuizResult(null);
       const headers = getAuthHeaders();
       if (!headers.Authorization) return;
 
-      const res = await fetch(`${API_BASE}/ai/quiz`, {
+      const res = await fetch(`${API_BASE}/notes/${selectedNote._id}/quiz`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ text: selectedNote.content, questionCount: 5 }),
+        body: JSON.stringify({ questionCount: 5 }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -318,6 +331,30 @@ export default function NotesPage() {
                 ))
               )}
             </div>
+
+            {totalPages > 1 && (
+              <div className="pt-2 flex items-center justify-between text-xs text-white/60">
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="px-3 py-1 rounded-full border border-white/20 bg-black/40 disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <span>
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="px-3 py-1 rounded-full border border-white/20 bg-black/40 disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </motion.div>
 
           {/* Note detail & quiz */}
@@ -365,6 +402,11 @@ export default function NotesPage() {
                       Quiz (MCQs)
                     </p>
                   </div>
+                  {quizResult && (
+                    <p className="text-xs text-emerald-300 mb-2">
+                      You scored {quizResult.correct}/{quizResult.total}.
+                    </p>
+                  )}
                   {isGeneratingQuiz ? (
                     <div className="flex items-center gap-2 text-sm text-white/60">
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -372,7 +414,7 @@ export default function NotesPage() {
                     </div>
                   ) : quizQuestions.length === 0 ? (
                     <p className="text-xs text-white/50">
-                      Click Generate Quiz   to create practice questions from this note.
+                      Click Generate Quiz to create practice questions from this note.
                     </p>
                   ) : (
                     <ol className="space-y-4 list-decimal list-inside">
@@ -381,21 +423,43 @@ export default function NotesPage() {
                           <p className="font-medium">{q.question}</p>
                           <ul className="space-y-1 ml-1 text-sm">
                             {q.options.map((opt, i) => (
-                              <li
-                                key={i}
-                                className={`flex items-center gap-2 ${
-                                  i === q.answerIndex ? "text-emerald-300" : "text-white/80"
-                                }`}
-                              >
-                                <span className="text-[11px] uppercase tracking-[0.25em] text-white/40">
-                                  {String.fromCharCode(65 + i)}.
-                                </span>
-                                <span>{opt}</span>
+                              <li key={i} className="flex items-center gap-2 text-white/80">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name={`q-${idx}`}
+                                    checked={quizAnswers[idx] === i}
+                                    onChange={() =>
+                                      setQuizAnswers((prev) => ({ ...prev, [idx]: i }))
+                                    }
+                                    className="h-3 w-3 accent-indigo-400"
+                                  />
+                                  <span className="text-[11px] uppercase tracking-[0.25em] text-white/40">
+                                    {String.fromCharCode(65 + i)}.
+                                  </span>
+                                  <span>{opt}</span>
+                                </label>
                               </li>
                             ))}
                           </ul>
                         </li>
                       ))}
+                      <li className="list-none mt-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!quizQuestions.length) return;
+                            let correct = 0;
+                            quizQuestions.forEach((q, idx) => {
+                              if (quizAnswers[idx] === q.answerIndex) correct += 1;
+                            });
+                            setQuizResult({ correct, total: quizQuestions.length });
+                          }}
+                          className="mt-2 inline-flex items-center gap-2 rounded-full bg-white text-black px-4 py-1.5 text-xs font-semibold hover:bg-white/90 transition"
+                        >
+                          Submit Quiz
+                        </button>
+                      </li>
                     </ol>
                   )}
                 </div>
