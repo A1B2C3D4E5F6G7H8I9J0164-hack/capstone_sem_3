@@ -149,6 +149,16 @@ export default function NotesPage() {
     [notes, selectedNoteId]
   );
 
+  const filteredNotes = useMemo(
+    () =>
+      notes.filter((note) =>
+        note.title.toLowerCase().includes(search.toLowerCase()) ||
+        note.content.toLowerCase().includes(search.toLowerCase()) ||
+        (note.subject && note.subject.toLowerCase().includes(search.toLowerCase()))
+      ),
+    [notes, search]
+  );
+
   const handleGenerateQuiz = async () => {
     if (!selectedNote) return;
     try {
