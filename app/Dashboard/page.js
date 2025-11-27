@@ -134,6 +134,7 @@ export default function DashboardPage() {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     };
+  };
 
 
   const handleAttachClick = () => {
@@ -163,7 +164,6 @@ export default function DashboardPage() {
         event.target.value = "";
       }
     }
-  };
   };
 
 
