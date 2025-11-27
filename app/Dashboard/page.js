@@ -30,7 +30,7 @@ const streakData = [
   { day: "Sun", hours: 2, target: 3 },
 ];
 
-// quickPanels will be dynamic now, defined in component
+
 
 const initialOverview = [
   { label: "Current Sprint", value: "Multi-modal Retrieval · Week 2" },
@@ -63,28 +63,28 @@ export default function DashboardPage() {
     email: "aditya@learnsphere.ai",
   });
 
-  // Streak state
+
   const [currentStreak, setCurrentStreak] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
   const [lastActivityDate, setLastActivityDate] = useState(null);
 
-  // Deep work timer state
+
   const [isFocusTimerOpen, setIsFocusTimerOpen] = useState(false);
   const [focusMinutes, setFocusMinutes] = useState(25);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [isFocusRunning, setIsFocusRunning] = useState(false);
 
-  // Pending tasks state
+
   const [pendingTasksCount, setPendingTasksCount] = useState(0);
   const [pendingTasks, setPendingTasks] = useState([]);
   const [isPendingTasksOpen, setIsPendingTasksOpen] = useState(false);
   const [isStreakDetailsOpen, setIsStreakDetailsOpen] = useState(false);
 
-  // Energy graph data
+
   const [energyGraphData, setEnergyGraphData] = useState([]);
   const [hoveredDay, setHoveredDay] = useState(null);
 
-  // Deep work stats state
+
   const [deepWorkStats, setDeepWorkStats] = useState({
     dailyGoalMinutes: 180,
     totalFocusMinutes: 0,
@@ -93,10 +93,10 @@ export default function DashboardPage() {
   });
   const [deepWorkGoalInput, setDeepWorkGoalInput] = useState(180);
 
-  // Refs
+
   const overviewRef = useRef(null);
 
-  // Inline form state
+
   const [newOverviewLabel, setNewOverviewLabel] = useState("");
   const [newOverviewValue, setNewOverviewValue] = useState("");
   const [newScheduleTime, setNewScheduleTime] = useState("");
@@ -112,15 +112,15 @@ export default function DashboardPage() {
     []
   );
 
-  // API base URL
+
   const API_BASE = "https://capstone-backend-3-jthr.onrender.com/api";
 
-  // Function to get auth headers with error handling
+
   const getAuthHeaders = () => {
     if (typeof window === "undefined") return {};
     const token = localStorage.getItem("token");
     if (!token) {
-      // Redirect to login if no token found
+
       window.location.href = '/Login';
       return {};
     }
@@ -130,22 +130,22 @@ export default function DashboardPage() {
     };
   };
 
-  // Handle API errors including 401 unauthorized
+
   const handleApiError = (error, context = '') => {
     console.error(`Error ${context}:`, error);
     if (error.status === 401) {
-      // Clear invalid token and redirect to login
+
       localStorage.removeItem('token');
       window.location.href = '/Login';
     }
     return null;
   };
 
-  // Wrapper for fetch with auth and error handling
+
   const fetchWithAuth = async (url, options = {}) => {
     try {
       const headers = getAuthHeaders();
-      if (Object.keys(headers).length === 0) return null; // Already handled by getAuthHeaders
+      if (Object.keys(headers).length === 0) return null; 
 
       const response = await fetch(url, {
         ...options,
@@ -161,7 +161,7 @@ export default function DashboardPage() {
           return null;
         }
 
-        // Gracefully handle optional deep work endpoints not being present on backend yet
+
         if (response.status === 404 && url.includes("/dashboard/deepwork")) {
           console.warn("Deep work endpoint not found on backend, skipping.");
           return null;
@@ -181,7 +181,7 @@ export default function DashboardPage() {
       overviewRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
-    // After scroll, try to focus label input so user can start typing immediately
+
     setTimeout(() => {
       const el = document.getElementById("overview-label-input");
       if (el && typeof el.focus === "function") {
@@ -190,7 +190,7 @@ export default function DashboardPage() {
     }, 400);
   };
 
-  // Load streak data from backend
+
   const fetchStreak = async () => {
     const data = await fetchWithAuth(`${API_BASE}/dashboard/streak`);
     if (data) {
@@ -200,7 +200,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Function to update streak when user opens/edits something
+
   const updateStreak = async () => {
     const data = await fetchWithAuth(`${API_BASE}/dashboard/streak/update`, {
       method: "POST"
@@ -212,7 +212,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Fetch milestones from backend
+
   const fetchMilestones = async () => {
     const data = await fetchWithAuth(`${API_BASE}/dashboard/milestones`);
     if (data && data.length > 0) {
@@ -225,7 +225,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Fetch overview from backend
+
   const fetchOverview = async () => {
     const data = await fetchWithAuth(`${API_BASE}/dashboard/overview`);
     if (data && data.length > 0) {
@@ -237,16 +237,16 @@ export default function DashboardPage() {
     }
   };
 
-  // Fetch schedules from backend
+
   const fetchSchedules = async () => {
     const data = await fetchWithAuth(`${API_BASE}/dashboard/schedules`);
     if (!data) return;
     
-    // Fetch tasks to match with schedules
+
     const tasksData = await fetchWithAuth(`${API_BASE}/dashboard/tasks?status=pending`);
     const tasks = tasksData || [];
 
-    // Map schedules and include related task details if taskId exists
+
     const scheduleItems = data.map((s) => {
       const relatedTask = tasks.find(t => t._id === s.taskId);
       return {
@@ -266,7 +266,7 @@ export default function DashboardPage() {
     setScheduleItems(scheduleItems);
   };
 
-  // Fetch pending tasks for today
+
   const fetchPendingTasks = async () => {
     try {
       const headers = getAuthHeaders();
@@ -287,7 +287,7 @@ export default function DashboardPage() {
         setPendingTasks(data.tasks || []);
       } else if (res.status === 401) {
         console.warn("Unauthorized - token may be expired or invalid");
-        // Don't show error to user, just log it
+
         setPendingTasksCount(0);
         setPendingTasks([]);
       } else {
@@ -302,14 +302,14 @@ export default function DashboardPage() {
     }
   };
 
-  // Fetch energy graph data (tasks by week)
+
   const fetchEnergyGraphData = async () => {
     try {
       console.log("Fetching energy graph data...");
       const headers = getAuthHeaders();
       if (!headers.Authorization) {
         console.warn("No token found, using sample data for energy graph");
-        // Use sample data for demonstration
+
         const sampleData = [
           { day: 'Mon', total: 5, completed: 3, pending: 2, activities: 2 },
           { day: 'Tue', total: 8, completed: 5, pending: 3, activities: 3 },
@@ -332,7 +332,7 @@ export default function DashboardPage() {
         setEnergyGraphData(response);
       } else {
         console.warn("Unexpected response format, using sample data");
-        // Use sample data if API response is not as expected
+
         const sampleData = [
           { day: 'Mon', total: 5, completed: 3, pending: 2, activities: 2 },
           { day: 'Tue', total: 8, completed: 5, pending: 3, activities: 3 },
@@ -346,7 +346,7 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error("Error in fetchEnergyGraphData:", err);
-      // Use sample data on error
+
       const sampleData = [
         { day: 'Mon', total: 5, completed: 3, pending: 2, activities: 2 },
         { day: 'Tue', total: 8, completed: 5, pending: 3, activities: 3 },
@@ -360,7 +360,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Load all data on mount
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     
@@ -382,17 +382,17 @@ export default function DashboardPage() {
         await fetchPendingTasks();
         await fetchEnergyGraphData();
         await fetchDeepWorkStats();
-        await updateStreak(); // Update streak when opening dashboard
+        await updateStreak();
       } catch (err) {
         console.error("Error loading dashboard data:", err);
       }
     };
 
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, []);
 
-  // Countdown effect for deep work timer
+
   useEffect(() => {
     if (!isFocusRunning || remainingSeconds <= 0) return;
 
@@ -437,7 +437,7 @@ export default function DashboardPage() {
     }
     
     setIsSummarizing(true);
-    setSummary(""); // Clear previous summary
+    setSummary(""); 
     updateStreak();
     
     try {
@@ -457,10 +457,10 @@ export default function DashboardPage() {
       console.log("Response status:", res.status);
       console.log("Response headers:", res.headers.get("content-type"));
       
-      // Check if response is JSON
+
       const contentType = res.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
-        // Try to read as text to see what we got
+
         const textResponse = await res.text();
         console.error("Non-JSON response received:", textResponse.substring(0, 200));
         
@@ -487,13 +487,13 @@ export default function DashboardPage() {
         if (data && data.summary && data.summary.trim()) {
           console.log("Summary received successfully, length:", data.summary.length);
           setSummary(data.summary);
-          await fetchEnergyGraphData(); // Refresh energy graph after summary
+          await fetchEnergyGraphData(); 
         } else {
           console.error("Empty summary received:", data);
           setSummary("Summary generated successfully, but no content was returned. Please try again.");
         }
       } else {
-        // Try to parse error response
+
         let errorMessage = "Failed to generate summary. Please try again.";
         if (data && data.message) {
           errorMessage = data.message;
@@ -503,7 +503,7 @@ export default function DashboardPage() {
         
         console.error("API Error:", res.status, errorMessage);
         
-        // If API is not configured, provide a fallback summary
+
         if (res.status === 503) {
           setSummary(`⚠️ AI service is not configured.\n\nFallback Summary:\n\n${generateFallbackSummary(notes)}`);
         } else {
@@ -512,14 +512,14 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error("Error generating summary:", err);
-      // Provide fallback summary on network errors
+
       setSummary(`⚠️ Network error: Unable to connect to AI service.\n\nFallback Summary:\n\n${generateFallbackSummary(notes)}`);
     } finally {
       setIsSummarizing(false);
     }
   };
 
-  // Fallback summary generator when AI is unavailable
+
   const generateFallbackSummary = (text) => {
     const clean = text.replace(/\s+/g, " ").trim();
     const sentences = clean.split(/(?<=[.!?])\s+/).filter(Boolean);
@@ -570,7 +570,7 @@ export default function DashboardPage() {
     setNewOverviewLabel("");
     setNewOverviewValue("");
         updateStreak();
-        await fetchEnergyGraphData(); // Refresh energy graph
+        await fetchEnergyGraphData(); 
       } else {
         const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
         console.error("Error creating overview:", errorData);
@@ -588,7 +588,7 @@ export default function DashboardPage() {
     try {
       const headers = getAuthHeaders();
   
-      // Create schedule
+
       const scheduleRes = await fetch(`${API_BASE}/dashboard/schedules`, {
         method: "POST",
         headers: {
@@ -616,7 +616,7 @@ export default function DashboardPage() {
           },
         ]);
   
-        // Create corresponding task
+
         const today = new Date();
         const endOfToday = new Date(
           today.getFullYear(),
@@ -646,7 +646,7 @@ export default function DashboardPage() {
         if (taskRes.ok) {
           const taskData = await taskRes.json();
   
-          // Attach task to schedule
+
           await fetch(`${API_BASE}/dashboard/schedules/${scheduleData._id}`, {
             method: "PUT",
             headers: {
@@ -656,7 +656,7 @@ export default function DashboardPage() {
             body: JSON.stringify({ taskId: taskData._id }),
           });
   
-          // Update state
+
           setScheduleItems((prev) =>
             prev.map((item) =>
               item.id === scheduleData._id
@@ -695,14 +695,14 @@ export default function DashboardPage() {
     try {
       const headers = getAuthHeaders();
       
-      // Delete schedule
+
       const scheduleRes = await fetch(`${API_BASE}/dashboard/schedules/${scheduleId}`, {
         method: "DELETE",
         headers: headers,
       });
 
       if (scheduleRes.ok) {
-        // Delete corresponding task if it exists
+
         if (taskId) {
           await fetch(`${API_BASE}/dashboard/tasks/${taskId}`, {
             method: "DELETE",
@@ -710,10 +710,10 @@ export default function DashboardPage() {
           });
         }
 
-        // Remove from state
+
         setScheduleItems((prev) => prev.filter((item) => item.id !== scheduleId));
         
-        // Refresh pending tasks count and energy graph
+
         await fetchPendingTasks();
         await fetchEnergyGraphData();
       } else {
@@ -730,7 +730,7 @@ export default function DashboardPage() {
     try {
       const headers = getAuthHeaders();
       
-      // Update task status to completed if task exists
+
       if (taskId) {
         const taskRes = await fetch(`${API_BASE}/dashboard/tasks/${taskId}`, {
           method: "PUT",
@@ -744,10 +744,10 @@ export default function DashboardPage() {
         });
 
         if (taskRes.ok) {
-          // Remove schedule from list (or mark as completed visually)
+
           setScheduleItems((prev) => prev.filter((item) => item.id !== scheduleId));
           
-          // Refresh pending tasks count and energy graph
+
           await fetchPendingTasks();
           await fetchEnergyGraphData();
         } else {
@@ -755,7 +755,7 @@ export default function DashboardPage() {
           alert(`Failed to complete task: ${errorData.message || "Unknown error"}`);
         }
       } else {
-        // If no task, just remove the schedule
+
         setScheduleItems((prev) => prev.filter((item) => item.id !== scheduleId));
       }
     } catch (err) {
@@ -895,7 +895,7 @@ export default function DashboardPage() {
         averageMinutes: data.averageMinutes || 0,
       });
     } else {
-      // If backend is not available, still keep client-side stats in sync
+
       setDeepWorkStats((prev) => {
         const totalFocusMinutes = (prev.totalFocusMinutes || 0) + mins;
         const sessionCount = (prev.sessionCount || 0) + 1;
@@ -916,7 +916,7 @@ export default function DashboardPage() {
     const mins = Math.max(15, Math.min(Number(deepWorkGoalInput) || 0, 720));
     setDeepWorkGoalInput(mins);
 
-    // Optimistically update local stats so the card below reflects the change immediately
+
     setDeepWorkStats((prev) => ({
       ...prev,
       dailyGoalMinutes: mins,
@@ -940,7 +940,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Fetch user profile using JWT from localStorage
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const token = localStorage.getItem("token");
@@ -964,7 +964,6 @@ export default function DashboardPage() {
         }
       })
       .catch(() => {
-        // ignore network/profile errors in UI
       });
 
     return () => controller.abort();
@@ -1095,14 +1094,12 @@ export default function DashboardPage() {
             </div>
             
             <div className="relative h-48 -mx-1">
-              {/* Background grid */}
               <div className="absolute inset-0 grid grid-cols-7 h-full">
                 {[...Array(7)].map((_, i) => (
                   <div key={i} className="border-r border-white/[0.03] last:border-r-0"></div>
                 ))}
               </div>
               
-              {/* Horizontal lines */}
               <div className="absolute inset-0 flex flex-col justify-between">
                 {[0, 25, 50, 75, 100].map((percent, i) => (
                   <div 
@@ -1122,10 +1119,10 @@ export default function DashboardPage() {
                 ))}
               </div>
               
-              {/* Graph bars */}
+
               <div className="relative h-full flex items-end justify-between px-1">
                 {energyGraphData === null ? (
-                  // Loading state
+
                   Array(7).fill(0).map((_, i) => (
                     <div 
                       key={`loading-${i}`} 
@@ -1141,14 +1138,13 @@ export default function DashboardPage() {
                   ))
                 ) : Array.isArray(energyGraphData) && energyGraphData.length > 0 ? (
                   energyGraphData.map((item) => {
-                    // Ensure we have the expected properties
+
                     const day = item.day || '';
                     const total = item.total || 0;
                     const completed = item.completed || 0;
                     const pending = item.pending || 0;
                     const activities = item.activities || 0;
                     
-                    // Calculate heights
                     const maxValue = Math.max(1, ...energyGraphData.map(d => 
                       Math.max(d.total || 0, d.activities || 0, d.completed || 0, d.pending || 0)
                     ));
@@ -1166,7 +1162,7 @@ export default function DashboardPage() {
                         onMouseEnter={() => setHoveredDay(day)}
                         onMouseLeave={() => setHoveredDay(null)}
                       >
-                        {/* Tooltip below bar with high z-index */}
+
                         {isHovered && (
                           <div 
                             className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-2 rounded-lg bg-gradient-to-b from-black/95 to-gray-900/95 border border-white/10 backdrop-blur-md z-50 shadow-xl shadow-black/40 w-40 text-sm"
@@ -1231,7 +1227,7 @@ export default function DashboardPage() {
                         )}
 
                         <div className="relative w-full h-full flex items-end justify-center group" style={{ minWidth: '28px' }}>
-                          {/* Bar container */}
+
                           <div 
                             className="relative w-6 mx-auto transition-all duration-300 group-hover:w-7"
                             style={{
@@ -1239,9 +1235,9 @@ export default function DashboardPage() {
                               transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
                             }}
                           >
-                            {/* Bar background */}
+
                             <div className="absolute inset-0 bg-black/20 rounded-t-lg overflow-hidden border border-white/5 transition-all duration-200 group-hover:border-white/10">
-                              {/* Pending tasks */}
+
                               {pending > 0 && (
                                 <div 
                                   className="absolute bottom-0 left-0 right-0 bg-rose-500/20 transition-all duration-300"
@@ -1252,7 +1248,7 @@ export default function DashboardPage() {
                                 ></div>
                               )}
                               
-                              {/* Completed tasks */}
+
                               <div 
                                 className="absolute bottom-0 left-0 right-0 bg-gradient-to-b from-white/90 to-white/70 transition-all duration-300"
                                 style={{
@@ -1262,11 +1258,11 @@ export default function DashboardPage() {
                                   boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.1)'
                                 }}
                               >
-                                {/* Shine effect */}
+
                                 <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-20"></div>
                               </div>
                               
-                              {/* Activity indicator */}
+
                               {activities > 0 && (
                                 <div 
                                   className="absolute -bottom-px left-0 right-0 h-0.5 bg-purple-400/90 transition-all duration-300 group-hover:bg-purple-300"
@@ -1278,20 +1274,20 @@ export default function DashboardPage() {
                               )}
                             </div>
                             
-                            {/* Hover effect */}
+
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity">
                               <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent rounded-t-lg"></div>
                             </div>
                           </div>
                           
-                          {/* Day label */}
+
                           <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-full text-center">
                             <span className="text-[10px] font-medium text-white/40 group-hover:text-white/70 transition-colors select-none">
                               {day.slice(0, 1)}
                             </span>
                           </div>
                           
-                          {/* Completed tasks overlay */}
+
                           {completed > 0 && (
                             <div 
                               className="absolute inset-x-0 bottom-0 bg-emerald-400/80 transition-all duration-300"
@@ -1303,7 +1299,7 @@ export default function DashboardPage() {
                             ></div>
                           )}
                           
-                          {/* Activity indicator */}
+
                           {activities > 0 && (
                             <div 
                               className="absolute inset-x-0 bottom-0 bg-purple-400/80 transition-all duration-300"
@@ -1320,7 +1316,7 @@ export default function DashboardPage() {
                     );
                   })
                 ) : (
-                  // Empty state
+
                   <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3">
                     <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center">
                       <Activity className="h-5 w-5 text-white/30" />
@@ -1332,7 +1328,6 @@ export default function DashboardPage() {
                 )}
               </div>
               
-              {/* X-axis labels */}
               <div className="flex justify-between px-0.5 mt-1">
                 {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
                   <div key={i} className="w-7 text-center">
@@ -1490,7 +1485,6 @@ export default function DashboardPage() {
           </section>
         )}
 
-        {/* Streak Details Modal */}
         {isStreakDetailsOpen && (
           <section className="rounded-3xl border border-indigo-500/40 bg-black/40 backdrop-blur-xl p-6 space-y-4">
             <div className="flex items-center justify-between">
@@ -1533,7 +1527,6 @@ export default function DashboardPage() {
           </section>
         )}
 
-        {/* Pending Tasks Modal */}
         {isPendingTasksOpen && (
           <section className="rounded-3xl border border-rose-500/40 bg-black/40 backdrop-blur-xl p-6 space-y-4">
             <div className="flex items-center justify-between">

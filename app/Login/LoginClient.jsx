@@ -12,7 +12,7 @@ export default function LoginClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // OAuth redirect handler
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -39,7 +39,6 @@ export default function LoginClient() {
       "https://capstone-backend-3-jthr.onrender.com/api/auth/google";
   };
 
-  // Email login
   async function handleLogin(e) {
     e.preventDefault();
     setLoading(true);
@@ -73,8 +72,6 @@ export default function LoginClient() {
       setLoading(false);
     }
   }
-
-  // Signup
   async function handleSignup(e) {
     e.preventDefault();
     setLoading(true);
@@ -119,10 +116,8 @@ export default function LoginClient() {
         backgroundPosition: "center",
       }}
     >
-      {/* dark overlay */}
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
 
-      {/* Error Popup */}
       <AnimatePresence>
         {errorPopup && (
           <motion.div
@@ -137,10 +132,8 @@ export default function LoginClient() {
         )}
       </AnimatePresence>
 
-      {/* MAIN CARD */}
       <div className="relative flex w-[90%] max-w-5xl overflow-hidden rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-neutral-800 bg-neutral-950/90">
         
-        {/* image section */}
         <AnimatePresence mode="wait">
           <motion.div
             key={isLogin ? "login-img" : "signup-img"}
@@ -162,7 +155,6 @@ export default function LoginClient() {
           </motion.div>
         </AnimatePresence>
 
-        {/* FORM SECTION */}
         <motion.div
           key={isLogin ? "login" : "signup"}
           initial={{ x: isLogin ? 100 : -100, opacity: 0 }}
@@ -173,7 +165,6 @@ export default function LoginClient() {
         >
           <AnimatePresence mode="wait">
 
-            {/* LOGIN */}
             {isLogin ? (
               <motion.div
                 key="login-form"
@@ -201,7 +192,6 @@ export default function LoginClient() {
                   </button>
                 </form>
 
-                {/* OAuth */}
                 <button
                   onClick={handleGoogleAuth}
                   className="w-full py-3 rounded-lg bg-white text-gray-900 mt-3 font-semibold"
@@ -220,7 +210,6 @@ export default function LoginClient() {
                 </p>
               </motion.div>
             ) : (
-              /* SIGNUP */
               <motion.div
                 key="signup-form"
                 initial={{ opacity: 0, y: 20 }}
