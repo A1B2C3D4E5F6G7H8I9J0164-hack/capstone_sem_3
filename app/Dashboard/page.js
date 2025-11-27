@@ -121,7 +121,7 @@ export default function DashboardPage() {
     const token = localStorage.getItem("token");
     if (!token) {
       // Redirect to login if no token found
-      window.location.href = '/login';
+      window.location.href = '/Login';
       return {};
     }
     return { 
@@ -136,7 +136,7 @@ export default function DashboardPage() {
     if (error.status === 401) {
       // Clear invalid token and redirect to login
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      window.location.href = '/Login';
     }
     return null;
   };
