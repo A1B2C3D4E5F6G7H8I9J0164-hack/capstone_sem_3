@@ -81,6 +81,9 @@ export default function DashboardPage() {
   const [isStreakDetailsOpen, setIsStreakDetailsOpen] = useState(false);
 
 
+  const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
+
+
   const [energyGraphData, setEnergyGraphData] = useState([]);
   const [hoveredDay, setHoveredDay] = useState(null);
 
@@ -977,6 +980,130 @@ export default function DashboardPage() {
       <Navbar />
 
       <main className="relative z-10 max-w-6xl mx-auto px-6 pt-32 pb-16 space-y-10">
+
+        {isProgressModalOpen && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-md">
+            <div className="relative w-full max-w-4xl rounded-3xl border border-white/15 bg-black/90 px-6 py-6 md:px-8 md:py-7 shadow-2xl">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.35em] text-white/40">Progress Overview</p>
+                  <h2 className="mt-1 text-xl md:text-2xl font-semibold text-white">Your learning snapshot</h2>
+                  <p className="mt-1 text-xs md:text-sm text-white/60">
+                    Quick view of streaks, focus time, weekly activity and milestones. Use this before sharing or downloading.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await handleShareProgress();
+                    }}
+                    className="inline-flex items-center gap-2 rounded-full bg-white text-black px-4 py-2 text-xs md:text-sm font-semibold hover:bg-white/90 transition"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Download report
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsProgressModalOpen(false)}
+                    className="rounded-full border border-white/30 px-3 py-2 text-[10px] md:text-xs font-semibold uppercase tracking-[0.3em] text-white/70 hover:text-white"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3 mb-4">
+                <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/40">Focus Streak</p>
+                  <p className="mt-2 text-2xl font-semibold text-indigo-300">{currentStreak} days</p>
+                  <p className="text-xs text-white/60 mt-1">Max streak: {maxStreak} days</p>
+                </div>
+                <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/40">Deep Work</p>
+                  <p className="mt-2 text-lg font-semibold text-white/90">
+                    {formatMinutesToHours(deepWorkStats.totalFocusMinutes || 0)} total
+                  </p>
+                  <p className="text-xs text-white/60 mt-1">
+                    {deepWorkStats.sessionCount || 0} sessions · Avg {formatMinutesToHours(deepWorkStats.averageMinutes || 0)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/40">Pending Work</p>
+                  <p className="mt-2 text-2xl font-semibold text-rose-300">{pendingTasksCount}</p>
+                  <p className="text-xs text-white/60 mt-1">tasks due today</p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3 items-stretch">
+                <div className="md:col-span-2 rounded-2xl border border-white/15 bg-black/60 px-4 py-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-white/80" />
+                      <p className="text-xs font-medium text-white/80">Weekly activity</p>
+                    </div>
+                    <p className="text-[11px] text-white/50">
+                      {Array.isArray(energyGraphData) ? energyGraphData.reduce((sum, d) => sum + (d.completed || 0), 0) : 0} completed ·
+                      {" "}
+                      {Array.isArray(energyGraphData) ? energyGraphData.reduce((sum, d) => sum + (d.pending || 0), 0) : 0} pending
+                    </p>
+                  </div>
+                  <div className="mt-1 flex items-end gap-1 h-28">
+                    {Array.isArray(energyGraphData) && energyGraphData.length > 0 ? (
+                      energyGraphData.map((d) => {
+                        const total = Math.max(1, d.total || 0);
+                        const completed = d.completed || 0;
+                        const pending = d.pending || 0;
+                        const completedHeight = (completed / total) * 100;
+                        const pendingHeight = (pending / total) * 100;
+                        return (
+                          <div key={d.day} className="flex-1 flex flex-col items-center h-full">
+                            <div className="relative w-5 h-full flex flex-col justify-end">
+                              <div
+                                className="w-full rounded-t-md bg-emerald-400/80"
+                                style={{ height: `${completedHeight}%` }}
+                              />
+                              {pending > 0 && (
+                                <div
+                                  className="w-full bg-rose-400/80 rounded-b-md"
+                                  style={{ height: `${pendingHeight}%` }}
+                                />
+                              )}
+                            </div>
+                            <span className="mt-1 text-[10px] text-white/40">{(d.day || '').slice(0, 1)}</span>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="flex-1 flex items-center justify-center text-xs text-white/50">
+                        No weekly data yet
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/15 bg-black/60 px-4 py-3 flex flex-col">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-2">Milestones</p>
+                  <div className="space-y-1 flex-1 overflow-y-auto max-h-40">
+                    {milestones && milestones.length > 0 ? (
+                      milestones.slice(0, 4).map((m) => (
+                        <div key={m.id || m.title} className="text-xs text-white/70 flex items-center justify-between gap-2">
+                          <span className="truncate">{m.title}</span>
+                          <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">{m.state}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-white/50">No milestones yet</p>
+                    )}
+                  </div>
+                  {milestones && milestones.length > 4 && (
+                    <p className="mt-1 text-[10px] text-white/40">+{milestones.length - 4} more</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <section className="grid gap-6 lg:grid-cols-3">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1025,7 +1152,7 @@ export default function DashboardPage() {
                 Update Blueprint
               </button>
               <button
-                onClick={handleShareProgress}
+                onClick={() => setIsProgressModalOpen(true)}
                 className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm text-white/80 hover:text-white"
               >
                 <Target className="h-4 w-4" />
