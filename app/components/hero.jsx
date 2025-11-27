@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion";
 import { Circle } from "lucide-react";
+import Link from "next/link";
+import { HoverBorderGradient } from "./heroButton";
 
 function ElegantShape({
   className = "",
@@ -160,9 +162,27 @@ function HeroGeometric({
             initial="hidden"
             animate="visible"
           >
-            <p className="text-base sm:text-lg md:text-xl text-white/40 mb-8 leading-relaxed font-light tracking-wide max-w-xl mx-auto px-4">
+            <p className="text-base sm:text-lg md:text-xl text-white/40 mb-6 md:mb-8 leading-relaxed font-light tracking-wide max-w-xl mx-auto px-4">
             An AI-powered platform that helps students summarize notes, generate quizzes, and track progress — making revision smarter and effortless.
             </p>
+          </motion.div>
+
+          <motion.div
+            custom={3}
+            variants={fadeUpVariants}
+            initial="hidden"
+            animate="visible"
+            className="flex justify-center mt-2"
+          >
+            <Link href="/Login">
+              <HoverBorderGradient
+                containerClassName="rounded-full"
+                as="button"
+                className="bg-black text-black dark:text-white flex items-center space-x-2 px-6 py-2 text-sm sm:text-base"
+              >
+                <span>Get Started</span>
+              </HoverBorderGradient>
+            </Link>
           </motion.div>
         </div>
       </div>
