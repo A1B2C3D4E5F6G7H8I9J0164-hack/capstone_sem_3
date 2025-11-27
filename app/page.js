@@ -7,7 +7,7 @@ import { HoverBorderGradient } from "./components/heroButton";
 
 const Page = () => {
   return (
-    <div className="relative w-full h-screen overflow-hidden">
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#030303] flex flex-col">
       <HeroGeometric
         badge="LearnSphere – AI Study Companion"
         title1="Simplify Learning with Intelligence"
@@ -15,19 +15,19 @@ const Page = () => {
       />
 
       <motion.div
-        className="absolute inset-0 flex justify-center items-center translate-y-60"
+        className="relative z-10 flex justify-center items-center pb-10 sm:pb-14 md:pb-20 -mt-10 sm:-mt-6 md:-mt-4"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.4, duration: 1, ease: "easeOut" }}
       >
         <Link href="/Login">
-        <HoverBorderGradient
-        containerClassName="rounded-full"
-        as="button"
-        className="bg-black text-black dark:text-white flex items-center space-x-2"
-      >
-        <span>Get Started</span>
-      </HoverBorderGradient>
+          <HoverBorderGradient
+            containerClassName="rounded-full"
+            as="button"
+            className="bg-black text-black dark:text-white flex items-center space-x-2 px-6 py-2 text-sm sm:text-base"
+          >
+            <span>Get Started</span>
+          </HoverBorderGradient>
         </Link>
       </motion.div>
     </div>
