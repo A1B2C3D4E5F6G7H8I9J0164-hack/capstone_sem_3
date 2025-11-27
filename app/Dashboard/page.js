@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -84,6 +84,18 @@ export default function DashboardPage() {
   const [energyGraphData, setEnergyGraphData] = useState([]);
   const [hoveredDay, setHoveredDay] = useState(null);
 
+  // Deep work stats state
+  const [deepWorkStats, setDeepWorkStats] = useState({
+    dailyGoalMinutes: 180,
+    totalFocusMinutes: 0,
+    sessionCount: 0,
+    averageMinutes: 0,
+  });
+  const [deepWorkGoalInput, setDeepWorkGoalInput] = useState(180);
+
+  // Refs
+  const overviewRef = useRef(null);
+
   // Inline form state
   const [newOverviewLabel, setNewOverviewLabel] = useState("");
   const [newOverviewValue, setNewOverviewValue] = useState("");
@@ -148,6 +160,12 @@ export default function DashboardPage() {
           handleApiError({ status: 401 }, `Unauthorized access to ${url}`);
           return null;
         }
+
+        // Gracefully handle optional deep work endpoints not being present on backend yet
+        if (response.status === 404 && url.includes("/dashboard/deepwork")) {
+          console.warn("Deep work endpoint not found on backend, skipping.");
+          return null;
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -155,6 +173,21 @@ export default function DashboardPage() {
     } catch (error) {
       return handleApiError(error, `fetching ${url}`);
     }
+  };
+
+  const handleUpdateBlueprintClick = () => {
+    if (typeof window === "undefined") return;
+    if (overviewRef.current && typeof overviewRef.current.scrollIntoView === "function") {
+      overviewRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    // After scroll, try to focus label input so user can start typing immediately
+    setTimeout(() => {
+      const el = document.getElementById("overview-label-input");
+      if (el && typeof el.focus === "function") {
+        el.focus();
+      }
+    }, 400);
   };
 
   // Load streak data from backend
@@ -348,6 +381,7 @@ export default function DashboardPage() {
         await fetchSchedules();
         await fetchPendingTasks();
         await fetchEnergyGraphData();
+        await fetchDeepWorkStats();
         await updateStreak(); // Update streak when opening dashboard
       } catch (err) {
         console.error("Error loading dashboard data:", err);
@@ -370,6 +404,7 @@ export default function DashboardPage() {
           if (typeof window !== "undefined") {
             alert("Deep work session complete! Great job staying focused.");
           }
+          logDeepWorkSession(focusMinutes);
           return 0;
         }
         return prev - 1;
@@ -377,7 +412,7 @@ export default function DashboardPage() {
     }, 1000);
 
     return () => clearInterval(id);
-  }, [isFocusRunning, remainingSeconds]);
+  }, [isFocusRunning, remainingSeconds, focusMinutes, logDeepWorkSession]);
 
   const formattedFocusTime = useMemo(() => {
     const total = remainingSeconds || focusMinutes * 60;
@@ -385,6 +420,15 @@ export default function DashboardPage() {
     const s = String(total % 60).padStart(2, "0");
     return `${m}:${s}`;
   }, [remainingSeconds, focusMinutes]);
+
+  const formatMinutesToHours = (minutes) => {
+    const mins = Math.max(0, Number(minutes) || 0);
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h === 0) return `${m}m`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+  };
 
   const handleSummarize = async () => {
     if (!notes.trim()) {
@@ -805,6 +849,19 @@ export default function DashboardPage() {
     }
   };
 
+  const fetchDeepWorkStats = async () => {
+    const data = await fetchWithAuth(`${API_BASE}/dashboard/deepwork`);
+    if (data) {
+      setDeepWorkStats({
+        dailyGoalMinutes: data.dailyGoalMinutes || 0,
+        totalFocusMinutes: data.totalFocusMinutes || 0,
+        sessionCount: data.sessionCount || 0,
+        averageMinutes: data.averageMinutes || 0,
+      });
+      setDeepWorkGoalInput(data.dailyGoalMinutes || 0);
+    }
+  };
+
   const handleStartFocus = () => {
     const mins = Number.isFinite(focusMinutes) ? Math.max(1, focusMinutes) : 25;
     setFocusMinutes(mins);
@@ -819,6 +876,68 @@ export default function DashboardPage() {
   const handleResetFocus = () => {
     setIsFocusRunning(false);
     setRemainingSeconds(0);
+  };
+
+  async function logDeepWorkSession(minutes) {
+    const mins = Math.max(1, Number(minutes) || 0);
+    const data = await fetchWithAuth(`${API_BASE}/dashboard/deepwork/session`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ minutes: mins }),
+    });
+    if (data) {
+      setDeepWorkStats({
+        dailyGoalMinutes: data.dailyGoalMinutes || 0,
+        totalFocusMinutes: data.totalFocusMinutes || 0,
+        sessionCount: data.sessionCount || 0,
+        averageMinutes: data.averageMinutes || 0,
+      });
+    } else {
+      // If backend is not available, still keep client-side stats in sync
+      setDeepWorkStats((prev) => {
+        const totalFocusMinutes = (prev.totalFocusMinutes || 0) + mins;
+        const sessionCount = (prev.sessionCount || 0) + 1;
+        const averageMinutes = sessionCount > 0
+          ? Math.round(totalFocusMinutes / sessionCount)
+          : 0;
+        return {
+          ...prev,
+          totalFocusMinutes,
+          sessionCount,
+          averageMinutes,
+        };
+      });
+    }
+  }
+
+  const handleSaveDeepWorkGoal = async () => {
+    const mins = Math.max(15, Math.min(Number(deepWorkGoalInput) || 0, 720));
+    setDeepWorkGoalInput(mins);
+
+    // Optimistically update local stats so the card below reflects the change immediately
+    setDeepWorkStats((prev) => ({
+      ...prev,
+      dailyGoalMinutes: mins,
+    }));
+
+    const data = await fetchWithAuth(`${API_BASE}/dashboard/deepwork`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ dailyGoalMinutes: mins }),
+    });
+    if (data) {
+      setDeepWorkStats({
+        dailyGoalMinutes: data.dailyGoalMinutes || mins,
+        totalFocusMinutes: data.totalFocusMinutes || 0,
+        sessionCount: data.sessionCount || 0,
+        averageMinutes: data.averageMinutes || 0,
+      });
+      setDeepWorkGoalInput(data.dailyGoalMinutes || mins);
+    }
   };
 
   // Fetch user profile using JWT from localStorage
@@ -899,7 +1018,10 @@ export default function DashboardPage() {
                 <Brain className="h-4 w-4" />
                 Shuffle Focus
               </button>
-              <button className="inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-2 text-sm text-white/80 hover:text-white">
+              <button
+                onClick={handleUpdateBlueprintClick}
+                className="inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-2 text-sm text-white/80 hover:text-white"
+              >
                 <Edit3 className="h-4 w-4" />
                 Update Blueprint
               </button>
@@ -909,6 +1031,41 @@ export default function DashboardPage() {
               >
                 <Target className="h-4 w-4" />
                 Share Progress
+              </button>
+            </div>
+
+            <div className="mt-4 grid gap-4 md:grid-cols-3 items-end">
+              <div className="rounded-2xl border border-white/15 bg-black/40 px-4 py-3">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-white/40">Daily Deep Work Goal</p>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <input
+                    type="number"
+                    min={15}
+                    max={720}
+                    value={deepWorkGoalInput}
+                    onChange={(e) => setDeepWorkGoalInput(Number(e.target.value) || 0)}
+                    className="w-20 rounded-xl border border-white/20 bg-black/40 px-2 py-1.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                  />
+                  <span className="text-xs text-white/50">minutes / day</span>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/15 bg-black/40 px-4 py-3">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-white/40">Average Session</p>
+                <p className="mt-2 text-lg font-semibold text-white/90">
+                  {formatMinutesToHours(deepWorkStats.averageMinutes || 0)}
+                </p>
+                <p className="text-[11px] text-white/50 mt-1">
+                  {deepWorkStats.sessionCount || 0} sessions logged
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSaveDeepWorkGoal}
+                className="rounded-full bg-white/90 text-black px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] hover:bg-white"
+              >
+                Save Goal
               </button>
             </div>
           </motion.div>
@@ -1217,8 +1374,18 @@ export default function DashboardPage() {
           </motion.button>
           
           {[
-            { title: "Deep Work Avg", value: "2h 45m", meta: "Goal: 3h", accent: "from-cyan-500/30 via-white/5" },
-            { title: "Pending Reviews", value: String(pendingTasksCount).padStart(2, "0"), meta: `${pendingTasksCount} due today`, accent: "from-rose-500/20 via-white/5" },
+            {
+              title: "Deep Work Avg",
+              value: formatMinutesToHours(deepWorkStats.averageMinutes || 0),
+              meta: `Goal: ${formatMinutesToHours(deepWorkStats.dailyGoalMinutes || 0)}`,
+              accent: "from-cyan-500/30 via-white/5",
+            },
+            {
+              title: "Pending Reviews",
+              value: String(pendingTasksCount).padStart(2, "0"),
+              meta: `${pendingTasksCount} due today`,
+              accent: "from-rose-500/20 via-white/5",
+            },
           ].map(({ title, value, meta, accent }, idx) => {
             const isDeepWork = title === "Deep Work Avg";
             const isPendingReviews = title === "Pending Reviews";
@@ -1430,6 +1597,7 @@ export default function DashboardPage() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
             className="lg:col-span-3 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-7"
+            ref={overviewRef}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -1454,6 +1622,7 @@ export default function DashboardPage() {
 
             <div className="mt-5 grid gap-3 md:grid-cols-[1fr,2fr,auto] items-end">
               <input
+                id="overview-label-input"
                 value={newOverviewLabel}
                 onChange={(e) => setNewOverviewLabel(e.target.value)}
                 placeholder="Label (e.g., Secondary Focus)"
