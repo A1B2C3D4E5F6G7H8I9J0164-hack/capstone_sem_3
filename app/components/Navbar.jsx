@@ -8,6 +8,7 @@ import {
   User,
   Settings,
   LogOut,
+  FileText,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -37,6 +38,9 @@ export default function Navbar() {
       <div className="flex items-center gap-6 text-white/70">
         <Link href="/Dashboard" className="flex items-center gap-2 hover:text-white transition">
           <Home className="h-4 w-4" /> <span className="hidden sm:inline">Home</span>
+        </Link>
+        <Link href="/Notes" className="flex items-center gap-2 hover:text-white transition">
+          <FileText className="h-4 w-4" /> <span className="hidden sm:inline">Notes</span>
         </Link>
         <Link href="/Profile" className="flex items-center gap-2 hover:text-white transition">
           <User className="h-4 w-4" /> <span className="hidden sm:inline">Profile</span>
