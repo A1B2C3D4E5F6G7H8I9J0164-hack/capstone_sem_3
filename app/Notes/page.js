@@ -27,7 +27,8 @@ export default function NotesPage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("createdAt_desc");
   const [isLoading, setIsLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [createForm, setCreateForm] = useState({
     title: "",
     subject: "",
@@ -95,7 +96,7 @@ export default function NotesPage() {
   const handleCreateNote = async (e) => {
     e.preventDefault();
     try {
-      setIsCreating(true);
+      setIsSaving(true);
       const headers = getAuthHeaders();
       if (!headers.Authorization) return;
 
@@ -128,7 +129,7 @@ export default function NotesPage() {
       console.error("Error creating note:", err);
       alert("Network error while creating note");
     } finally {
-      setIsCreating(false);
+      setIsSaving(false);
     }
   };
 
@@ -225,14 +226,14 @@ export default function NotesPage() {
             className="md:col-span-1 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-5 flex flex-col gap-4 max-h-[70vh]"
           >
             <button
-              onClick={() => setIsCreating((v) => !v)}
+              onClick={() => setIsCreateOpen((v) => !v)}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-white text-black text-sm font-semibold px-4 py-2 hover:bg-white/90 transition"
             >
               <Plus className="h-4 w-4" />
-              {isCreating ? "Close" : "New Note"}
+              {isCreateOpen ? "Close" : "New Note"}
             </button>
 
-            {isCreating && (
+            {isCreateOpen && (
               <form onSubmit={handleCreateNote} className="space-y-3 text-sm">
                 <input
                   type="text"
@@ -265,11 +266,11 @@ export default function NotesPage() {
                 />
                 <button
                   type="submit"
-                  disabled={isCreating}
+                  disabled={isSaving}
                   className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-indigo-500 hover:bg-indigo-600 px-4 py-2 text-sm font-semibold transition disabled:opacity-50"
                 >
-                  {isCreating && <Loader2 className="h-4 w-4 animate-spin" />}
-                  <span>{isCreating ? "Saving..." : "Save Note"}</span>
+                  {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                  <span>{isSaving ? "Saving..." : "Save Note"}</span>
                 </button>
               </form>
             )}
