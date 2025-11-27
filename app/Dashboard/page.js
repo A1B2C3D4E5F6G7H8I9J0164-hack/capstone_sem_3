@@ -100,6 +100,9 @@ export default function DashboardPage() {
   const overviewRef = useRef(null);
 
 
+  const attachInputRef = useRef(null);
+
+
   const [newOverviewLabel, setNewOverviewLabel] = useState("");
   const [newOverviewValue, setNewOverviewValue] = useState("");
   const [newScheduleTime, setNewScheduleTime] = useState("");
@@ -131,6 +134,36 @@ export default function DashboardPage() {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     };
+
+
+  const handleAttachClick = () => {
+    if (attachInputRef.current && typeof attachInputRef.current.click === "function") {
+      attachInputRef.current.click();
+    }
+  };
+
+
+  const handleAttachFileChange = (event) => {
+    try {
+      const file = event.target?.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = String(e.target?.result || "");
+        if (!text) return;
+        setNotes((prev) => {
+          if (!prev) return text;
+          return `${prev}\n\n${text}`;
+        });
+      };
+      reader.readAsText(file);
+    } finally {
+      if (event.target) {
+        event.target.value = "";
+      }
+    }
+  };
   };
 
 
@@ -1921,6 +1954,14 @@ export default function DashboardPage() {
               className="w-full rounded-2xl border border-white/15 bg-black/40 p-4 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/40 resize-none"
             />
 
+            <input
+              ref={attachInputRef}
+              type="file"
+              accept=".txt,.md,text/plain"
+              className="hidden"
+              onChange={handleAttachFileChange}
+            />
+
             <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={handleSummarize}
@@ -1930,7 +1971,11 @@ export default function DashboardPage() {
                 <Sparkles className="h-4 w-4" />
                 {isSummarizing ? "Summarizing..." : "Summarize"}
               </button>
-              <button className="inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 hover:text-white">
+              <button
+                type="button"
+                onClick={handleAttachClick}
+                className="inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/70 hover:text-white"
+              >
                 <Upload className="h-4 w-4" />
                 Attach
               </button>
