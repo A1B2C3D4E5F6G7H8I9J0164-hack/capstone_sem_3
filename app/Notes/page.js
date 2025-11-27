@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
 import HeroBackground from "../components/HeroBackground";
-import { Search, Plus, Loader2, Sparkles, ListChecks } from "lucide-react";
+import { Search, Plus, Loader2, Sparkles, ListChecks, ChevronLeft, ChevronRight, FileText, Filter, ArrowUpDown, X } from "lucide-react";
 
 const API_BASE = "https://capstone-backend-3-jthr.onrender.com/api";
 
@@ -211,22 +211,26 @@ export default function NotesPage() {
               <Search className="h-4 w-4 text-white/40" />
               <input
                 type="text"
+                placeholder="Search notes..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search in title or content"
-                className="bg-transparent text-sm outline-none w-full"
+                className="bg-transparent placeholder:text-white/40 text-white text-sm outline-none flex-1 w-20 md:w-auto"
               />
             </div>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value)}
-              className="rounded-full border border-white/15 bg-black/60 text-sm px-3 py-1.5 outline-none"
+              className="rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-sm text-white/80 outline-none"
             >
               <option value="createdAt_desc">Newest</option>
               <option value="createdAt_asc">Oldest</option>
               <option value="title_asc">Title A–Z</option>
               <option value="title_desc">Title Z–A</option>
             </select>
+            <div className="flex items-center gap-2 text-xs text-white/60">
+              <Filter className="h-4 w-4" />
+              Sort
+            </div>
           </form>
         </motion.div>
 
@@ -239,11 +243,12 @@ export default function NotesPage() {
             className="md:col-span-1 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-5 flex flex-col gap-4 max-h-[70vh]"
           >
             <button
-              onClick={() => setIsCreateOpen((v) => !v)}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-white text-black text-sm font-semibold px-4 py-2 hover:bg-white/90 transition"
+              type="button"
+              onClick={() => setIsCreateOpen(!isCreateOpen)}
+              className="inline-flex items-center gap-2 rounded-full bg-white text-black px-4 py-2 text-sm font-semibold hover:bg-white/90 transition"
             >
               <Plus className="h-4 w-4" />
-              {isCreateOpen ? "Close" : "New Note"}
+              New Note
             </button>
 
             {isCreateOpen && (
@@ -335,23 +340,23 @@ export default function NotesPage() {
             {totalPages > 1 && (
               <div className="pt-2 flex items-center justify-between text-xs text-white/60">
                 <button
-                  type="button"
+                  onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="px-3 py-1 rounded-full border border-white/20 bg-black/40 disabled:opacity-40"
+                  className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed hover:border-white/40 transition"
                 >
-                  Previous
+                  <ChevronLeft className="h-3 w-3" />
+                  Prev
                 </button>
                 <span>
                   Page {page} of {totalPages}
                 </span>
                 <button
-                  type="button"
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
                   disabled={page >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className="px-3 py-1 rounded-full border border-white/20 bg-black/40 disabled:opacity-40"
+                  className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2 py-1 disabled:opacity-40 disabled:cursor-not-allowed hover:border-white/40 transition"
                 >
                   Next
+                  <ChevronRight className="h-3 w-3" />
                 </button>
               </div>
             )}
@@ -368,7 +373,10 @@ export default function NotesPage() {
               <>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-xl font-semibold">{selectedNote.title}</h2>
+                    <h2 className="text-xl font-semibold flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-indigo-300" />
+                      {selectedNote.title}
+                    </h2>
                     <p className="text-xs text-white/50 mt-0.5">
                       {selectedNote.subject || "General"}
                     </p>
@@ -399,7 +407,7 @@ export default function NotesPage() {
                   <div className="flex items-center gap-2 mb-2">
                     <ListChecks className="h-4 w-4 text-indigo-300" />
                     <p className="text-xs uppercase tracking-[0.3em] text-white/50">
-                      Quiz (MCQs)
+                      Quiz
                     </p>
                   </div>
                   {quizResult && (
