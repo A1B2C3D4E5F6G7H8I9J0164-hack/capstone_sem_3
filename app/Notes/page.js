@@ -191,6 +191,23 @@ export default function NotesPage() {
     }
   };
 
+  const handleQuizSubmit = () => {
+    if (quizQuestions.length === 0) return;
+    
+    let correct = 0;
+    quizQuestions.forEach((q, idx) => {
+      if (quizAnswers[idx] === q.correctAnswer) {
+        correct++;
+      }
+    });
+    
+    setQuizResult({
+      correct,
+      total: quizQuestions.length,
+      score: Math.round((correct / quizQuestions.length) * 100)
+    });
+  };
+
   return (
     <div className="relative min-h-screen bg-[#030303] dark:bg-[#030303] bg-white text-white dark:text-white overflow-hidden">
       <HeroBackground />
