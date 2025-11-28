@@ -164,7 +164,7 @@ export default function LoginClient() {
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.05] via-transparent to-rose-500/[0.05] blur-3xl" />
 
       {/* Floating geometric shapes */}
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden blur-xl">
         <ElegantShape
           delay={0.3}
           width={600}
