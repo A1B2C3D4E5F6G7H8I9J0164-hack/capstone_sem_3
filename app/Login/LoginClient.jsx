@@ -243,10 +243,10 @@ export default function LoginClient() {
               }
               alt={isLogin ? "Futuristic dark architectural background" : "Dark office interior"}
               fill
-              className="object-cover opacity-70"
+              className="object-cover opacity-50 blur-sm"
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/70 to-black/90 backdrop-blur-md" />
           </motion.div>
         </AnimatePresence>
 
