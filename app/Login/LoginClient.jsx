@@ -246,7 +246,7 @@ export default function LoginClient() {
               className="object-cover opacity-50"
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/70 to-black/90 backdrop-blur-md" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/70 to-black/90" />
           </motion.div>
         </AnimatePresence>
 
