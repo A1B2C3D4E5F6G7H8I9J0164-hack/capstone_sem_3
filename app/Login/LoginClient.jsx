@@ -238,10 +238,10 @@ export default function LoginClient() {
             <Image
               src={
                 isLogin
-                  ? "https://images.unsplash.com/photo-1603791440384-56cd371ee9a7?auto=format&fit=crop&w=1600&q=80"
-                  : "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1600&q=80"
+                  ? "https://i0.wp.com/picjumbo.com/wp-content/uploads/magnificent-futuristic-dark-architectural-background-free-photo.jpeg?quality=70&w=2210"
+                  : "https://plus.unsplash.com/premium_photo-1661407772941-c5a2a5c9595b?fm=jpg&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8ZGFyayUyMG9mZmljZXxlbnwwfHwwfHx8MA%3D%3D&ixlib=rb-4.1.0&q=60&w=3000"
               }
-              alt={isLogin ? "Person working at desk with laptop" : "Team collaboration meeting"}
+              alt={isLogin ? "Futuristic dark architectural background" : "Dark office interior"}
               fill
               className="object-cover opacity-70"
               priority
