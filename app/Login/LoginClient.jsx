@@ -243,7 +243,7 @@ export default function LoginClient() {
               }
               alt={isLogin ? "Futuristic dark architectural background" : "Dark office interior"}
               fill
-              className="object-cover opacity-50 blur-sm"
+              className="object-cover opacity-50"
               priority
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/70 to-black/90 backdrop-blur-md" />
