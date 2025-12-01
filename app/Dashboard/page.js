@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -1081,7 +1081,7 @@ export default function DashboardPage() {
                       {Array.isArray(energyGraphData) ? energyGraphData.reduce((sum, d) => sum + (d.pending || 0), 0) : 0} pending
                     </p>
                   </div>
-                  <div className="mt-1 flex items-end gap-1 h-28">
+                  <div className="mt-1 flex items-end gap-1.5 h-28">
                     {Array.isArray(energyGraphData) && energyGraphData.length > 0 ? (
                       energyGraphData.map((d) => {
                         const total = Math.max(1, d.total || 0);
@@ -1090,20 +1090,20 @@ export default function DashboardPage() {
                         const completedHeight = (completed / total) * 100;
                         const pendingHeight = (pending / total) * 100;
                         return (
-                          <div key={d.day} className="flex-1 flex flex-col items-center h-full">
+                          <div key={d.day} className="flex-1 flex flex-col items-center h-full group">
                             <div className="relative w-5 h-full flex flex-col justify-end">
                               <div
-                                className="w-full rounded-t-md bg-emerald-400/80"
+                                className="w-full rounded-t-md bg-gradient-to-t from-emerald-500 to-emerald-400 shadow-sm shadow-emerald-500/30 transition-all duration-300 group-hover:shadow-md group-hover:shadow-emerald-500/40"
                                 style={{ height: `${completedHeight}%` }}
                               />
                               {pending > 0 && (
                                 <div
-                                  className="w-full bg-rose-400/80 rounded-b-md"
+                                  className="w-full bg-gradient-to-b from-rose-400 to-rose-500 rounded-b-md shadow-sm shadow-rose-500/30 transition-all duration-300 group-hover:shadow-md group-hover:shadow-rose-500/40"
                                   style={{ height: `${pendingHeight}%` }}
                                 />
                               )}
                             </div>
-                            <span className="mt-1 text-[10px] text-white/40">{(d.day || '').slice(0, 1)}</span>
+                            <span className="mt-1 text-[10px] text-white/40 group-hover:text-white/60 transition-colors">{(d.day || '').slice(0, 1)}</span>
                           </div>
                         );
                       })
@@ -1298,7 +1298,7 @@ export default function DashboardPage() {
                         animationDelay: `var(--delay, 0s)`,
                       }}
                     >
-                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-gray-800/30 to-gray-700/20 rounded-t-lg"></div>
+                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-indigo-500/30 to-purple-500/20 rounded-t-lg shadow-sm shadow-indigo-500/20"></div>
                     </div>
                   ))
                 ) : Array.isArray(energyGraphData) && energyGraphData.length > 0 ? (
@@ -1401,40 +1401,37 @@ export default function DashboardPage() {
                             }}
                           >
 
-                            <div className="absolute inset-0 bg-black/20 rounded-t-lg overflow-hidden border border-white/5 transition-all duration-200 group-hover:border-white/10">
+                            <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-black/20 rounded-t-lg overflow-hidden border border-white/10 transition-all duration-200 group-hover:border-white/20 shadow-sm">
 
                               {pending > 0 && (
                                 <div 
-                                  className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-rose-500 to-rose-400/90 transition-all duration-300"
+                                  className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-rose-500 to-rose-400 transition-all duration-300 shadow-sm shadow-rose-500/40"
                                   style={{
                                     height: `${(pending / total) * 100}%`,
-                                    borderTop: '1px solid rgba(236, 72, 153, 0.4)',
-                                    boxShadow: 'inset 0 1px 2px rgba(236, 72, 153, 0.2)'
+                                    borderTop: '1px solid rgba(236, 72, 153, 0.4)'
                                   }}
                                 ></div>
                               )}
                               
 
                               <div 
-                                className="absolute bottom-0 left-0 right-0 bg-gradient-to-b from-emerald-400 to-emerald-300/90 transition-all duration-300"
+                                className="absolute bottom-0 left-0 right-0 bg-gradient-to-b from-emerald-400 to-emerald-500 transition-all duration-300 shadow-sm shadow-emerald-500/40"
                                 style={{
                                   height: `${(completed / total) * 100}%`,
                                   borderTopLeftRadius: '0.5rem',
-                                  borderTopRightRadius: '0.5rem',
-                                  boxShadow: 'inset 0 1px 2px rgba(16, 185, 129, 0.2), 0 0 12px rgba(16, 185, 129, 0.15)'
+                                  borderTopRightRadius: '0.5rem'
                                 }}
                               >
 
-                                <div className="absolute inset-0 bg-gradient-to-b from-emerald-300/30 to-transparent opacity-60"></div>
+                                <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent opacity-40"></div>
                               </div>
                               
 
                               {activities > 0 && (
                                 <div 
-                                  className="absolute -bottom-px left-0 right-0 h-1 bg-gradient-to-t from-purple-500 to-purple-400 transition-all duration-300 group-hover:from-purple-400 group-hover:to-purple-300"
+                                  className="absolute -bottom-px left-0 right-0 h-1 bg-gradient-to-t from-purple-500 to-purple-400 transition-all duration-300 group-hover:from-purple-400 group-hover:to-purple-300 shadow-sm shadow-purple-500/40"
                                   style={{
-                                    bottom: `${(activities / total) * 100}%`,
-                                    boxShadow: '0 0 12px rgba(168, 85, 247, 0.6), inset 0 1px 2px rgba(168, 85, 247, 0.3)'
+                                    bottom: `${(activities / total) * 100}%`
                                   }}
                                 ></div>
                               )}
@@ -1442,7 +1439,7 @@ export default function DashboardPage() {
                             
 
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent rounded-t-lg"></div>
+                              <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent rounded-t-lg"></div>
                             </div>
                           </div>
                           
@@ -1452,31 +1449,6 @@ export default function DashboardPage() {
                               {day.slice(0, 1)}
                             </span>
                           </div>
-                          
-
-                          {completed > 0 && (
-                            <div 
-                              className="absolute inset-x-0 bottom-0 bg-emerald-400/80 transition-all duration-300"
-                              style={{ 
-                                height: `${completedHeight}%`,
-                                borderTopLeftRadius: '0.5rem',
-                                borderTopRightRadius: '0.5rem',
-                              }}
-                            ></div>
-                          )}
-                          
-
-                          {activities > 0 && (
-                            <div 
-                              className="absolute inset-x-0 bottom-0 bg-purple-400/80 transition-all duration-300"
-                              style={{ 
-                                height: '4px',
-                                bottom: '2px',
-                                borderBottomLeftRadius: '0.25rem',
-                                borderBottomRightRadius: '0.25rem',
-                              }}
-                            ></div>
-                          )}
                         </div>
                       </div>
                     );
