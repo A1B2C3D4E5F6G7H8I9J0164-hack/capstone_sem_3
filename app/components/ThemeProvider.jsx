@@ -16,7 +16,6 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     // Apply theme to document on mount and when theme changes
     document.documentElement.classList.toggle("dark", theme === "dark");
-    document.documentElement.classList.toggle("light", theme === "light");
   }, [theme]);
 
   const toggleTheme = () => {
