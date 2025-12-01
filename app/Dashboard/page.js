@@ -126,7 +126,6 @@ export default function DashboardPage() {
       attachInputRef.current.click();
     }
   };
-
   const handleAttachFileChange = (event) => {
     try {
       const file = event.target?.files?.[0];
