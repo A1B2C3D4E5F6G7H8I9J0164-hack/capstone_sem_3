@@ -30,8 +30,6 @@ const streakData = [
   { day: "Sun", hours: 2, target: 3 },
 ];
 
-
-
 const initialOverview = [
   { label: "Current Sprint", value: "Multi-modal Retrieval · Week 2" },
   { label: "Primary Focus", value: "Prototype refinement & latency tests" },
@@ -50,7 +48,6 @@ const milestoneCards = [
   { title: "Mentor Review", detail: "Dec 08 · Remote", state: "Scheduled" },
 ];
 
-
 export default function DashboardPage() {
   const [notes, setNotes] = useState("");
   const [summary, setSummary] = useState("");
@@ -63,30 +60,24 @@ export default function DashboardPage() {
     email: "aditya@learnsphere.ai",
   });
 
-
   const [currentStreak, setCurrentStreak] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
   const [lastActivityDate, setLastActivityDate] = useState(null);
-
 
   const [isFocusTimerOpen, setIsFocusTimerOpen] = useState(false);
   const [focusMinutes, setFocusMinutes] = useState(25);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [isFocusRunning, setIsFocusRunning] = useState(false);
 
-
   const [pendingTasksCount, setPendingTasksCount] = useState(0);
   const [pendingTasks, setPendingTasks] = useState([]);
   const [isPendingTasksOpen, setIsPendingTasksOpen] = useState(false);
   const [isStreakDetailsOpen, setIsStreakDetailsOpen] = useState(false);
 
-
   const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
-
 
   const [energyGraphData, setEnergyGraphData] = useState([]);
   const [hoveredDay, setHoveredDay] = useState(null);
-
 
   const [deepWorkStats, setDeepWorkStats] = useState({
     dailyGoalMinutes: 180,
@@ -96,12 +87,9 @@ export default function DashboardPage() {
   });
   const [deepWorkGoalInput, setDeepWorkGoalInput] = useState(180);
 
-
   const overviewRef = useRef(null);
 
-
   const attachInputRef = useRef(null);
-
 
   const [newOverviewLabel, setNewOverviewLabel] = useState("");
   const [newOverviewValue, setNewOverviewValue] = useState("");
@@ -118,15 +106,12 @@ export default function DashboardPage() {
     []
   );
 
-
   const API_BASE = "https://capstone-backend-3-jthr.onrender.com/api";
-
 
   const getAuthHeaders = () => {
     if (typeof window === "undefined") return {};
     const token = localStorage.getItem("token");
     if (!token) {
-
       window.location.href = '/Login';
       return {};
     }
@@ -136,13 +121,11 @@ export default function DashboardPage() {
     };
   };
 
-
   const handleAttachClick = () => {
     if (attachInputRef.current && typeof attachInputRef.current.click === "function") {
       attachInputRef.current.click();
     }
   };
-
 
   const handleAttachFileChange = (event) => {
     try {
@@ -166,17 +149,14 @@ export default function DashboardPage() {
     }
   };
 
-
   const handleApiError = (error, context = '') => {
     console.error(`Error ${context}:`, error);
     if (error.status === 401) {
-
       localStorage.removeItem('token');
       window.location.href = '/Login';
     }
     return null;
   };
-
 
   const fetchWithAuth = async (url, options = {}) => {
     try {
@@ -197,7 +177,6 @@ export default function DashboardPage() {
           return null;
         }
 
-
         if (response.status === 404 && url.includes("/dashboard/deepwork")) {
           console.warn("Deep work endpoint not found on backend, skipping.");
           return null;
@@ -217,7 +196,6 @@ export default function DashboardPage() {
       overviewRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
-
     setTimeout(() => {
       const el = document.getElementById("overview-label-input");
       if (el && typeof el.focus === "function") {
@@ -226,18 +204,16 @@ export default function DashboardPage() {
     }, 400);
   };
 
-
-  const fetchStreak = async () => {
+  const fetchStreak = useCallback(async () => {
     const data = await fetchWithAuth(`${API_BASE}/dashboard/streak`);
     if (data) {
       setCurrentStreak(data.currentStreak || 0);
       setMaxStreak(data.maxStreak || 0);
       setLastActivityDate(data.lastActivityDate || null);
     }
-  };
+  }, []);
 
-
-  const updateStreak = async () => {
+  const updateStreak = useCallback(async () => {
     const data = await fetchWithAuth(`${API_BASE}/dashboard/streak/update`, {
       method: "POST"
     });
@@ -246,10 +222,9 @@ export default function DashboardPage() {
       setMaxStreak(data.maxStreak || 0);
       setLastActivityDate(data.lastActivityDate || null);
     }
-  };
+  }, []);
 
-
-  const fetchMilestones = async () => {
+  const fetchMilestones = useCallback(async () => {
     const data = await fetchWithAuth(`${API_BASE}/dashboard/milestones`);
     if (data && data.length > 0) {
       setMilestones(data.map((m) => ({
@@ -259,10 +234,9 @@ export default function DashboardPage() {
         id: m._id,
       })));
     }
-  };
+  }, []);
 
-
-  const fetchOverview = async () => {
+  const fetchOverview = useCallback(async () => {
     const data = await fetchWithAuth(`${API_BASE}/dashboard/overview`);
     if (data && data.length > 0) {
       setOverview(data.map((o) => ({
@@ -271,17 +245,14 @@ export default function DashboardPage() {
         id: o._id,
       })));
     }
-  };
+  }, []);
 
-
-  const fetchSchedules = async () => {
+  const fetchSchedules = useCallback(async () => {
     const data = await fetchWithAuth(`${API_BASE}/dashboard/schedules`);
     if (!data) return;
-    
 
     const tasksData = await fetchWithAuth(`${API_BASE}/dashboard/tasks?status=pending`);
     const tasks = tasksData || [];
-
 
     const scheduleItems = data.map((s) => {
       const relatedTask = tasks.find(t => t._id === s.taskId);
@@ -300,21 +271,20 @@ export default function DashboardPage() {
     });
 
     setScheduleItems(scheduleItems);
-  };
+  }, []);
 
-
-  const fetchPendingTasks = async () => {
+  const fetchPendingTasks = useCallback(async () => {
     try {
       const headers = getAuthHeaders();
       if (!headers.Authorization) {
         console.warn("No token found, skipping pending tasks fetch");
         return;
       }
-      
+
       const res = await fetch(`${API_BASE}/dashboard/tasks/pending-today`, {
         headers: headers,
       });
-      
+
       if (res.ok) {
         const data = await res.json();
         const count = data.count || 0;
@@ -323,7 +293,6 @@ export default function DashboardPage() {
         setPendingTasks(data.tasks || []);
       } else if (res.status === 401) {
         console.warn("Unauthorized - token may be expired or invalid");
-
         setPendingTasksCount(0);
         setPendingTasks([]);
       } else {
@@ -336,10 +305,9 @@ export default function DashboardPage() {
       setPendingTasksCount(0);
       setPendingTasks([]);
     }
-  };
+  }, []);
 
-
-  const fetchEnergyGraphData = async () => {
+  const fetchEnergyGraphData = useCallback(async () => {
     try {
       console.log("Fetching energy graph data...");
       const headers = getAuthHeaders();
@@ -358,11 +326,11 @@ export default function DashboardPage() {
         setEnergyGraphData(sampleData);
         return;
       }
-      
+
       console.log("Making API request to:", `${API_BASE}/dashboard/tasks/week`);
       const response = await fetchWithAuth(`${API_BASE}/dashboard/tasks/week`);
       console.log("API Response:", response);
-      
+
       if (response && Array.isArray(response)) {
         console.log("Setting energy graph data:", response);
         setEnergyGraphData(response);
@@ -394,8 +362,7 @@ export default function DashboardPage() {
       ];
       setEnergyGraphData(sampleData);
     }
-  };
-
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -428,6 +395,39 @@ export default function DashboardPage() {
 
   }, []);
 
+  const logDeepWorkSession = useCallback(async (minutes) => {
+    const mins = Math.max(1, Number(minutes) || 0);
+    const data = await fetchWithAuth(`${API_BASE}/dashboard/deepwork/session`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ minutes: mins }),
+    });
+    if (data) {
+      setDeepWorkStats({
+        dailyGoalMinutes: data.dailyGoalMinutes || 0,
+        totalFocusMinutes: data.totalFocusMinutes || 0,
+        sessionCount: data.sessionCount || 0,
+        averageMinutes: data.averageMinutes || 0,
+      });
+    } else {
+      // Fallback to local state update
+      setDeepWorkStats((prev) => {
+        const totalFocusMinutes = (prev.totalFocusMinutes || 0) + mins;
+        const sessionCount = (prev.sessionCount || 0) + 1;
+        const averageMinutes = sessionCount > 0
+          ? Math.round(totalFocusMinutes / sessionCount)
+          : 0;
+        return {
+          ...prev,
+          totalFocusMinutes,
+          sessionCount,
+          averageMinutes,
+        };
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (!isFocusRunning || remainingSeconds <= 0) return;
@@ -471,16 +471,16 @@ export default function DashboardPage() {
       setSummary("Add some notes first so I can craft a summary for you.");
       return;
     }
-    
+
     setIsSummarizing(true);
-    setSummary(""); 
+    setSummary("");
     updateStreak();
-    
+
     try {
       const headers = getAuthHeaders();
       const url = `${API_BASE}/ai/summarize`;
       console.log("Calling AI summarize endpoint:", url);
-      
+
       const res = await fetch(url, {
         method: "POST",
         headers: { 
@@ -489,17 +489,16 @@ export default function DashboardPage() {
         },
         body: JSON.stringify({ notes: notes.trim() }),
       });
-      
+
       console.log("Response status:", res.status);
       console.log("Response headers:", res.headers.get("content-type"));
-      
 
       const contentType = res.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
 
         const textResponse = await res.text();
         console.error("Non-JSON response received:", textResponse.substring(0, 200));
-        
+
         if (res.status === 404) {
           setSummary(`⚠️ AI endpoint not found. The backend may not be deployed with the latest changes.\n\nFallback Summary:\n\n${generateFallbackSummary(notes)}`);
         } else {
@@ -507,7 +506,7 @@ export default function DashboardPage() {
         }
         return;
       }
-      
+
       let data;
       try {
         data = await res.json();
@@ -518,12 +517,12 @@ export default function DashboardPage() {
         setSummary(`Error: Invalid JSON response from server. Status: ${res.status}\n\nFallback Summary:\n\n${generateFallbackSummary(notes)}`);
         return;
       }
-      
+
       if (res.ok) {
         if (data && data.summary && data.summary.trim()) {
           console.log("Summary received successfully, length:", data.summary.length);
           setSummary(data.summary);
-          await fetchEnergyGraphData(); 
+          await fetchEnergyGraphData();
         } else {
           console.error("Empty summary received:", data);
           setSummary("Summary generated successfully, but no content was returned. Please try again.");
@@ -536,9 +535,8 @@ export default function DashboardPage() {
         } else if (res.statusText) {
           errorMessage = res.statusText;
         }
-        
+
         console.error("API Error:", res.status, errorMessage);
-        
 
         if (res.status === 503) {
           setSummary(`⚠️ AI service is not configured.\n\nFallback Summary:\n\n${generateFallbackSummary(notes)}`);
@@ -555,23 +553,22 @@ export default function DashboardPage() {
     }
   };
 
-
   const generateFallbackSummary = (text) => {
     const clean = text.replace(/\s+/g, " ").trim();
     const sentences = clean.split(/(?<=[.!?])\s+/).filter(Boolean);
     const keyPoints = clean
       .split(/[.,;:]/)
-        .map((s) => s.trim())
+      .map((s) => s.trim())
       .filter((s) => s.length > 10)
       .slice(0, 5);
     const summary = [
       sentences.slice(0, 2).join(" ") || clean.slice(0, 200),
-        "",
+      "",
       "Key Points:",
       ...keyPoints.map((point, idx) => `${idx + 1}. ${point}`),
-      ]
-        .filter(Boolean)
-        .join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     return summary;
   };
@@ -585,7 +582,7 @@ export default function DashboardPage() {
 
   const handleAddOverview = async () => {
     if (!newOverviewLabel.trim() || !newOverviewValue.trim()) return;
-    
+
     try {
       const headers = getAuthHeaders();
       const res = await fetch(`${API_BASE}/dashboard/overview`, {
@@ -599,14 +596,14 @@ export default function DashboardPage() {
           value: newOverviewValue.trim(),
         }),
       });
-      
+
       if (res.ok) {
         const data = await res.json();
         setOverview((prev) => [...prev, { label: data.label, value: data.value, id: data._id }]);
-    setNewOverviewLabel("");
-    setNewOverviewValue("");
+        setNewOverviewLabel("");
+        setNewOverviewValue("");
         updateStreak();
-        await fetchEnergyGraphData(); 
+        await fetchEnergyGraphData();
       } else {
         const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
         console.error("Error creating overview:", errorData);
@@ -620,10 +617,9 @@ export default function DashboardPage() {
 
   const handleAddSchedule = async () => {
     if (!newScheduleTitle.trim()) return;
-  
+
     try {
       const headers = getAuthHeaders();
-  
 
       const scheduleRes = await fetch(`${API_BASE}/dashboard/schedules`, {
         method: "POST",
@@ -637,10 +633,10 @@ export default function DashboardPage() {
           detail: newScheduleDetail.trim() || "Tap to edit details",
         }),
       });
-  
+
       if (scheduleRes.ok) {
         const scheduleData = await scheduleRes.json();
-  
+
         setScheduleItems((prev) => [
           ...prev,
           {
@@ -651,7 +647,6 @@ export default function DashboardPage() {
             taskId: null,
           },
         ]);
-  
 
         const today = new Date();
         const endOfToday = new Date(
@@ -660,7 +655,7 @@ export default function DashboardPage() {
           today.getDate(),
           23, 59, 59, 999
         );
-  
+
         const taskRes = await fetch(`${API_BASE}/dashboard/tasks`, {
           method: "POST",
           headers: {
@@ -678,10 +673,9 @@ export default function DashboardPage() {
             priority: "medium",
           }),
         });
-  
+
         if (taskRes.ok) {
           const taskData = await taskRes.json();
-  
 
           await fetch(`${API_BASE}/dashboard/schedules/${scheduleData._id}`, {
             method: "PUT",
@@ -691,7 +685,6 @@ export default function DashboardPage() {
             },
             body: JSON.stringify({ taskId: taskData._id }),
           });
-  
 
           setScheduleItems((prev) =>
             prev.map((item) =>
@@ -701,14 +694,14 @@ export default function DashboardPage() {
             )
           );
         }
-  
+
         await fetchPendingTasks();
         await fetchEnergyGraphData();
-  
+
         setNewScheduleTitle("");
         setNewScheduleTime("");
         setNewScheduleDetail("");
-  
+
         updateStreak();
       } else {
         const errorData = await scheduleRes.json().catch(() => ({
@@ -723,14 +716,12 @@ export default function DashboardPage() {
       );
     }
   };
-  
 
   const handleDeleteSchedule = async (scheduleId, taskId) => {
     if (!confirm("Are you sure you want to delete this schedule?")) return;
 
     try {
       const headers = getAuthHeaders();
-      
 
       const scheduleRes = await fetch(`${API_BASE}/dashboard/schedules/${scheduleId}`, {
         method: "DELETE",
@@ -746,9 +737,7 @@ export default function DashboardPage() {
           });
         }
 
-
         setScheduleItems((prev) => prev.filter((item) => item.id !== scheduleId));
-        
 
         await fetchPendingTasks();
         await fetchEnergyGraphData();
@@ -765,7 +754,6 @@ export default function DashboardPage() {
   const handleCompleteSchedule = async (scheduleId, taskId) => {
     try {
       const headers = getAuthHeaders();
-      
 
       if (taskId) {
         const taskRes = await fetch(`${API_BASE}/dashboard/tasks/${taskId}`, {
@@ -782,7 +770,6 @@ export default function DashboardPage() {
         if (taskRes.ok) {
 
           setScheduleItems((prev) => prev.filter((item) => item.id !== scheduleId));
-          
 
           await fetchPendingTasks();
           await fetchEnergyGraphData();
@@ -802,7 +789,7 @@ export default function DashboardPage() {
 
   const handleAddMilestone = async () => {
     if (!newMilestoneTitle.trim()) return;
-    
+
     try {
       const headers = getAuthHeaders();
       const res = await fetch(`${API_BASE}/dashboard/milestones`, {
@@ -812,12 +799,12 @@ export default function DashboardPage() {
           "Content-Type": "application/json" 
         },
         body: JSON.stringify({
-        title: newMilestoneTitle.trim(),
-        detail: newMilestoneDetail.trim() || "Details coming soon",
-        state: newMilestoneState.trim() || "Planned",
+          title: newMilestoneTitle.trim(),
+          detail: newMilestoneDetail.trim() || "Details coming soon",
+          state: newMilestoneState.trim() || "Planned",
         }),
       });
-      
+
       if (res.ok) {
         const data = await res.json();
         setMilestones((prev) => [
@@ -827,13 +814,13 @@ export default function DashboardPage() {
             detail: data.detail,
             state: data.state,
             id: data._id,
-      },
-    ]);
-    setNewMilestoneTitle("");
-    setNewMilestoneDetail("");
-    setNewMilestoneState("");
+          },
+        ]);
+        setNewMilestoneTitle("");
+        setNewMilestoneDetail("");
+        setNewMilestoneState("");
         updateStreak();
-        await fetchEnergyGraphData(); // Refresh energy graph
+        await fetchEnergyGraphData();
       } else {
         const errorData = await res.json().catch(() => ({ message: "Unknown error" }));
         console.error("Error creating milestone:", errorData);
@@ -885,7 +872,7 @@ export default function DashboardPage() {
     }
   };
 
-  const fetchDeepWorkStats = async () => {
+  const fetchDeepWorkStats = useCallback(async () => {
     const data = await fetchWithAuth(`${API_BASE}/dashboard/deepwork`);
     if (data) {
       setDeepWorkStats({
@@ -896,7 +883,7 @@ export default function DashboardPage() {
       });
       setDeepWorkGoalInput(data.dailyGoalMinutes || 0);
     }
-  };
+  }, []);
 
   const handleStartFocus = () => {
     const mins = Number.isFinite(focusMinutes) ? Math.max(1, focusMinutes) : 25;
@@ -913,40 +900,6 @@ export default function DashboardPage() {
     setIsFocusRunning(false);
     setRemainingSeconds(0);
   };
-
-  async function logDeepWorkSession(minutes) {
-    const mins = Math.max(1, Number(minutes) || 0);
-    const data = await fetchWithAuth(`${API_BASE}/dashboard/deepwork/session`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ minutes: mins }),
-    });
-    if (data) {
-      setDeepWorkStats({
-        dailyGoalMinutes: data.dailyGoalMinutes || 0,
-        totalFocusMinutes: data.totalFocusMinutes || 0,
-        sessionCount: data.sessionCount || 0,
-        averageMinutes: data.averageMinutes || 0,
-      });
-    } else {
-
-      setDeepWorkStats((prev) => {
-        const totalFocusMinutes = (prev.totalFocusMinutes || 0) + mins;
-        const sessionCount = (prev.sessionCount || 0) + 1;
-        const averageMinutes = sessionCount > 0
-          ? Math.round(totalFocusMinutes / sessionCount)
-          : 0;
-        return {
-          ...prev,
-          totalFocusMinutes,
-          sessionCount,
-          averageMinutes,
-        };
-      });
-    }
-  }
 
   const handleSaveDeepWorkGoal = async () => {
     const mins = Math.max(15, Math.min(Number(deepWorkGoalInput) || 0, 720));
@@ -1006,9 +959,9 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="relative min-h-screen bg-[#030303] dark:bg-[#030303] bg-white text-white dark:text-white overflow-hidden">
+    <div className="relative min-h-screen bg-[#030303] dark:bg-[#030303] light:bg-gray-50 text-white dark:text-white light:text-gray-900 overflow-hidden">
       <HeroBackground />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/70 to-black/95 dark:from-black/30 dark:via-black/70 dark:to-black/95" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/70 to-black/95 dark:from-black/30 dark:via-black/70 dark:to-black/95 light:from-white/40 light:via-white/60 light:to-white/80" />
 
       <Navbar />
 
@@ -1069,13 +1022,13 @@ export default function DashboardPage() {
               </div>
 
               <div className="grid gap-4 md:grid-cols-3 items-stretch">
-                <div className="md:col-span-2 rounded-2xl border border-white/15 bg-black/60 px-4 py-3">
+                <div className="md:col-span-2 rounded-2xl border border-white/15 dark:border-white/15 light:border-gray-200 bg-black/60 dark:bg-black/60 light:bg-gray-100 px-4 py-3">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <Activity className="h-4 w-4 text-white/80" />
-                      <p className="text-xs font-medium text-white/80">Weekly activity</p>
+                      <Activity className="h-4 w-4 text-white/80 dark:text-white/80 light:text-gray-700" />
+                      <p className="text-xs font-medium text-white/80 dark:text-white/80 light:text-gray-700">Weekly activity</p>
                     </div>
-                    <p className="text-[11px] text-white/50">
+                    <p className="text-[11px] text-white/50 dark:text-white/50 light:text-gray-600">
                       {Array.isArray(energyGraphData) ? energyGraphData.reduce((sum, d) => sum + (d.completed || 0), 0) : 0} completed ·
                       {" "}
                       {Array.isArray(energyGraphData) ? energyGraphData.reduce((sum, d) => sum + (d.pending || 0), 0) : 0} pending
@@ -1093,44 +1046,44 @@ export default function DashboardPage() {
                           <div key={d.day} className="flex-1 flex flex-col items-center h-full group">
                             <div className="relative w-5 h-full flex flex-col justify-end">
                               <div
-                                className="w-full rounded-t-md bg-gradient-to-t from-emerald-500 to-emerald-400 shadow-sm shadow-emerald-500/30 transition-all duration-300 group-hover:shadow-md group-hover:shadow-emerald-500/40"
+                                className="w-full rounded-t-md bg-gradient-to-t from-emerald-500 dark:from-emerald-500 light:from-emerald-600 to-emerald-400 dark:to-emerald-400 light:to-emerald-500 shadow-sm shadow-emerald-500/30 transition-all duration-300 group-hover:shadow-md group-hover:shadow-emerald-500/40"
                                 style={{ height: `${completedHeight}%` }}
                               />
                               {pending > 0 && (
                                 <div
-                                  className="w-full bg-gradient-to-b from-rose-400 to-rose-500 rounded-b-md shadow-sm shadow-rose-500/30 transition-all duration-300 group-hover:shadow-md group-hover:shadow-rose-500/40"
+                                  className="w-full bg-gradient-to-b from-rose-400 dark:from-rose-400 light:from-rose-600 to-rose-500 dark:to-rose-500 light:to-rose-700 rounded-b-md shadow-sm shadow-rose-500/30 transition-all duration-300 group-hover:shadow-md group-hover:shadow-rose-500/40"
                                   style={{ height: `${pendingHeight}%` }}
                                 />
                               )}
                             </div>
-                            <span className="mt-1 text-[10px] text-white/40 group-hover:text-white/60 transition-colors">{(d.day || '').slice(0, 1)}</span>
+                            <span className="mt-1 text-[10px] text-white/40 dark:text-white/40 light:text-gray-500 group-hover:text-white/60 dark:group-hover:text-white/60 light:group-hover:text-gray-700 transition-colors">{(d.day || '').slice(0, 1)}</span>
                           </div>
                         );
                       })
                     ) : (
-                      <div className="flex-1 flex items-center justify-center text-xs text-white/50">
+                      <div className="flex-1 flex items-center justify-center text-xs text-white/50 dark:text-white/50 light:text-gray-600">
                         No weekly data yet
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-white/15 bg-black/60 px-4 py-3 flex flex-col">
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-2">Milestones</p>
+                <div className="rounded-2xl border border-white/15 dark:border-white/15 light:border-gray-200 bg-black/60 dark:bg-black/60 light:bg-gray-100 px-4 py-3 flex flex-col">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 dark:text-white/40 light:text-gray-600 mb-2">Milestones</p>
                   <div className="space-y-1 flex-1 overflow-y-auto max-h-40">
                     {milestones && milestones.length > 0 ? (
                       milestones.slice(0, 4).map((m) => (
-                        <div key={m.id || m.title} className="text-xs text-white/70 flex items-center justify-between gap-2">
+                        <div key={m.id || m.title} className="text-xs text-white/70 dark:text-white/70 light:text-gray-700 flex items-center justify-between gap-2">
                           <span className="truncate">{m.title}</span>
-                          <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">{m.state}</span>
+                          <span className="text-[10px] uppercase tracking-[0.2em] text-white/40 dark:text-white/40 light:text-gray-500">{m.state}</span>
                         </div>
                       ))
                     ) : (
-                      <p className="text-xs text-white/50">No milestones yet</p>
+                      <p className="text-xs text-white/50 dark:text-white/50 light:text-gray-600">No milestones yet</p>
                     )}
                   </div>
                   {milestones && milestones.length > 4 && (
-                    <p className="mt-1 text-[10px] text-white/40">+{milestones.length - 4} more</p>
+                    <p className="mt-1 text-[10px] text-white/40 dark:text-white/40 light:text-gray-500">+{milestones.length - 4} more</p>
                   )}
                 </div>
               </div>
@@ -1142,26 +1095,26 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="lg:col-span-2 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-7"
+            className="lg:col-span-2 rounded-3xl border border-white/10 dark:border-white/10 light:border-gray-200 bg-white/5 dark:bg-white/5 light:bg-white/90 backdrop-blur-xl p-7"
           >
             <div className="flex flex-wrap items-center gap-4">
               <div className="relative h-20 w-20 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 shadow-[0_10px_35px_rgba(79,70,229,0.45)]">
-                <div className="absolute inset-0 rounded-2xl border border-white/40" />
-                <div className="absolute inset-0 flex items-center justify-center text-3xl font-semibold text-white">
+                <div className="absolute inset-0 rounded-2xl border border-white/40 dark:border-white/40 light:border-gray-300" />
+                <div className="absolute inset-0 flex items-center justify-center text-3xl font-semibold text-white dark:text-white light:text-gray-800">
                   {(user.name || "A").charAt(0).toUpperCase()}
                 </div>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-white/50">Dashboard</p>
-                <h1 className="text-3xl font-semibold tracking-tight">
+                <p className="text-xs uppercase tracking-[0.35em] text-white/50 dark:text-white/50 light:text-gray-500">Dashboard</p>
+                <h1 className="text-3xl font-semibold tracking-tight text-white dark:text-white light:text-gray-900">
                   Hi {user.name || "Learner"}, ready for tonight&apos;s sprint?
                 </h1>
-                <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-white/70">
+                <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-white/70 dark:text-white/70 light:text-gray-600">
                   <span className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" /> Bangalore · IST
+                    <MapPin className="h-4 w-4 text-white dark:text-white light:text-gray-600" /> Bangalore · IST
                   </span>
                   {user.email && (
-                    <span className="px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs">
+                    <span className="px-3 py-1 rounded-full bg-white/10 dark:bg-white/10 light:bg-gray-100 border border-white/20 dark:border-white/20 light:border-gray-300 text-xs text-white dark:text-white light:text-gray-700">
                       {user.email}
                     </span>
                   )}
@@ -1179,14 +1132,14 @@ export default function DashboardPage() {
               </button>
               <button
                 onClick={handleUpdateBlueprintClick}
-                className="inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-2 text-sm text-white/80 hover:text-white"
+                className="inline-flex items-center gap-2 rounded-full border border-white/30 dark:border-white/30 light:border-gray-300 px-4 py-2 text-sm text-white/80 dark:text-white/80 light:text-gray-700 hover:text-white dark:hover:text-white light:hover:text-gray-900"
               >
                 <Edit3 className="h-4 w-4" />
                 Update Blueprint
               </button>
               <button
                 onClick={() => setIsProgressModalOpen(true)}
-                className="inline-flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm text-white/80 hover:text-white"
+                className="inline-flex items-center gap-2 rounded-full border border-white/20 dark:border-white/20 light:border-gray-300 px-4 py-2 text-sm text-white/80 dark:text-white/80 light:text-gray-700 hover:text-white dark:hover:text-white light:hover:text-gray-900"
               >
                 <Target className="h-4 w-4" />
                 Share Progress
@@ -1194,8 +1147,8 @@ export default function DashboardPage() {
             </div>
 
             <div className="mt-4 grid gap-4 md:grid-cols-3 items-end">
-              <div className="rounded-2xl border border-white/15 bg-black/40 px-4 py-3">
-                <p className="text-[10px] uppercase tracking-[0.3em] text-white/40">Daily Deep Work Goal</p>
+              <div className="rounded-2xl border border-white/15 dark:border-white/15 light:border-gray-200 bg-black/40 dark:bg-black/40 light:bg-gray-100 px-4 py-3">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 dark:text-white/40 light:text-gray-600">Daily Deep Work Goal</p>
                 <div className="mt-2 flex items-baseline gap-2">
                   <input
                     type="number"
@@ -1203,18 +1156,18 @@ export default function DashboardPage() {
                     max={720}
                     value={deepWorkGoalInput}
                     onChange={(e) => setDeepWorkGoalInput(Number(e.target.value) || 0)}
-                    className="w-20 rounded-xl border border-white/20 bg-black/40 px-2 py-1.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                    className="w-20 rounded-xl border border-white/20 dark:border-white/20 light:border-gray-300 bg-black/40 dark:bg-black/40 light:bg-white px-2 py-1.5 text-sm text-white dark:text-white light:text-gray-800 placeholder:text-white/40 dark:placeholder:text-white/40 light:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
                   />
-                  <span className="text-xs text-white/50">minutes / day</span>
+                  <span className="text-xs text-white/50 dark:text-white/50 light:text-gray-600">minutes / day</span>
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/15 bg-black/40 px-4 py-3">
-                <p className="text-[10px] uppercase tracking-[0.3em] text-white/40">Average Session</p>
-                <p className="mt-2 text-lg font-semibold text-white/90">
+              <div className="rounded-2xl border border-white/15 dark:border-white/15 light:border-gray-200 bg-black/40 dark:bg-black/40 light:bg-gray-100 px-4 py-3">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 dark:text-white/40 light:text-gray-600">Average Session</p>
+                <p className="mt-2 text-lg font-semibold text-white/90 dark:text-white/90 light:text-gray-800">
                   {formatMinutesToHours(deepWorkStats.averageMinutes || 0)}
                 </p>
-                <p className="text-[11px] text-white/50 mt-1">
+                <p className="text-[11px] text-white/50 dark:text-white/50 light:text-gray-600 mt-1">
                   {deepWorkStats.sessionCount || 0} sessions logged
                 </p>
               </div>
@@ -1228,32 +1181,34 @@ export default function DashboardPage() {
               </button>
             </div>
           </motion.div>
+        </section>
 
+        <section className="grid gap-6 lg:grid-cols-3">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-20 rounded-2xl bg-gradient-to-br from-black/80 via-black to-gray-900/90 border border-white/5 shadow-2xl shadow-black/50 p-5 space-y-5 backdrop-blur-md"
+            className="relative z-20 rounded-2xl bg-gradient-to-br from-black/80 via-black to-gray-900/90 dark:from-black/80 dark:via-black dark:to-gray-900/90 light:from-white/90 light:via-gray-50 light:to-gray-100/90 border border-white/5 dark:border-white/5 light:border-gray-200 shadow-2xl shadow-black/50 dark:shadow-black/50 light:shadow-gray-300/30 p-5 space-y-5 backdrop-blur-md"
           >
             <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
               <div className="flex items-center space-x-2">
-                <Activity className="h-4 w-4 text-white/80" />
-                <p className="text-sm font-medium text-white/90">Activity Overview</p>
+                <Activity className="h-4 w-4 text-white/80 dark:text-white/80 light:text-gray-700" />
+                <p className="text-sm font-medium text-white/90 dark:text-white/90 light:text-gray-800">Activity Overview</p>
               </div>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/70">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/70 dark:text-white/70 light:text-gray-600">
                 <span className="flex items-center">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 mr-1.5 shadow-sm shadow-emerald-400/50"></span>
-                  <span className="text-white/80">Completed</span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 dark:bg-emerald-400 light:bg-emerald-600 mr-1.5 shadow-sm shadow-emerald-400/50"></span>
+                  <span className="text-white/80 dark:text-white/80 light:text-gray-700">Completed</span>
                 </span>
-                <span className="hidden sm:inline text-white/30">•</span>
+                <span className="hidden sm:inline text-white/30 dark:text-white/30 light:text-gray-400">•</span>
                 <span className="flex items-center">
-                  <span className="w-2 h-2 rounded-full bg-rose-400 mr-1.5 shadow-sm shadow-rose-400/50"></span>
-                  <span className="text-white/60">Pending</span>
+                  <span className="w-2 h-2 rounded-full bg-rose-400 dark:bg-rose-400 light:bg-rose-600 mr-1.5 shadow-sm shadow-rose-400/50"></span>
+                  <span className="text-white/60 dark:text-white/60 light:text-gray-600">Pending</span>
                 </span>
-                <span className="hidden sm:inline text-white/30">•</span>
+                <span className="hidden sm:inline text-white/30 dark:text-white/30 light:text-gray-400">•</span>
                 <span className="flex items-center">
-                  <span className="w-2 h-2 rounded-full bg-purple-400 mr-1.5 shadow-sm shadow-purple-400/50"></span>
-                  <span className="text-white/60">Activities</span>
+                  <span className="w-2 h-2 rounded-full bg-purple-400 dark:bg-purple-400 light:bg-purple-600 mr-1.5 shadow-sm shadow-purple-400/50"></span>
+                  <span className="text-white/60 dark:text-white/60 light:text-gray-600">Activities</span>
                 </span>
               </div>
             </div>
@@ -1261,7 +1216,7 @@ export default function DashboardPage() {
             <div className="relative h-48 -mx-1">
               <div className="absolute inset-0 grid grid-cols-7 h-full">
                 {[...Array(7)].map((_, i) => (
-                  <div key={i} className="border-r border-white/[0.03] last:border-r-0"></div>
+                  <div key={i} className="border-r border-white/[0.03] dark:border-white/[0.03] light:border-gray-200/20 last:border-r-0"></div>
                 ))}
               </div>
               
@@ -1272,11 +1227,13 @@ export default function DashboardPage() {
                     className="relative h-px w-full"
                     style={{ 
                       marginTop: i === 0 ? 0 : 'auto',
-                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.03) 10%, rgba(255,255,255,0.03) 90%, transparent)'
+                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.03) 10%, rgba(255,255,255,0.03) 90%, transparent)',
+                      dark: { background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.03) 10%, rgba(255,255,255,0.03) 90%, transparent)' },
+                      light: { background: 'linear-gradient(90deg, transparent, rgba(0,0,0,0.05) 10%, rgba(0,0,0,0.05) 90%, transparent)' }
                     }}
                   >
                     {percent > 0 && (
-                      <span className="absolute left-1 text-[10px] text-white/20 -translate-y-1/2 select-none">
+                      <span className="absolute left-1 text-[10px] text-white/20 dark:text-white/20 light:text-gray-400 -translate-y-1/2 select-none">
                         {100 - percent}
                       </span>
                     )}
@@ -1284,10 +1241,8 @@ export default function DashboardPage() {
                 ))}
               </div>
               
-
               <div className="relative h-full flex items-end justify-between px-1">
                 {energyGraphData === null ? (
-
                   Array(7).fill(0).map((_, i) => (
                     <div 
                       key={`loading-${i}`} 
@@ -1298,12 +1253,11 @@ export default function DashboardPage() {
                         animationDelay: `var(--delay, 0s)`,
                       }}
                     >
-                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-indigo-500/30 to-purple-500/20 rounded-t-lg shadow-sm shadow-indigo-500/20"></div>
+                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-indigo-500/30 dark:from-indigo-500/30 light:from-indigo-400/40 to-purple-500/20 dark:to-purple-500/20 light:to-purple-400/30 rounded-t-lg shadow-sm shadow-indigo-500/20"></div>
                     </div>
                   ))
                 ) : Array.isArray(energyGraphData) && energyGraphData.length > 0 ? (
                   energyGraphData.map((item) => {
-
                     const day = item.day || '';
                     const total = item.total || 0;
                     const completed = item.completed || 0;
@@ -1327,15 +1281,14 @@ export default function DashboardPage() {
                         onMouseEnter={() => setHoveredDay(day)}
                         onMouseLeave={() => setHoveredDay(null)}
                       >
-
                         {isHovered && (
                           <div 
-                            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-2 rounded-lg bg-gradient-to-b from-black/95 to-gray-900/95 border border-white/10 backdrop-blur-md z-50 shadow-xl shadow-black/40 w-40 text-sm"
+                            className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-2 rounded-lg bg-gradient-to-b from-black/95 dark:from-black/95 light:from-white/95 to-gray-900/95 dark:to-gray-900/95 light:to-gray-100/95 border border-white/10 dark:border-white/10 light:border-gray-200 backdrop-blur-md z-50 shadow-xl shadow-black/40 dark:shadow-black/40 light:shadow-gray-300/40 w-40 text-sm"
                           >
-                            <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-white/10">
-                              <p className="text-sm font-semibold text-white">{day}</p>
+                            <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-white/10 dark:border-white/10 light:border-gray-200">
+                              <p className="text-sm font-semibold text-white dark:text-white light:text-gray-800">{day}</p>
                               <div className="flex items-center space-x-1.5">
-                                <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-white/10 text-white/80">
+                                <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-white/10 dark:bg-white/10 light:bg-gray-100 text-white/80 dark:text-white/80 light:text-gray-700">
                                   {total} total
                                 </span>
                               </div>
@@ -1343,56 +1296,39 @@ export default function DashboardPage() {
                             
                             <div className="space-y-1.5">
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-gray-300 flex items-center">
-                                  <span className="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span>
+                                <span className="text-xs text-gray-300 dark:text-gray-300 light:text-gray-600 flex items-center">
+                                  <span className="w-2 h-2 rounded-full bg-emerald-400 dark:bg-emerald-400 light:bg-emerald-600 mr-1.5"></span>
                                   Completed
                                 </span>
-                                <span className="text-xs font-medium text-white">{completed || 0}</span>
+                                <span className="text-xs font-medium text-white dark:text-white light:text-gray-800">{completed || 0}</span>
                               </div>
                               
                               <div className="flex items-center justify-between">
-                                <span className="text-xs text-gray-300 flex items-center">
-                                  <span className="w-2 h-2 rounded-full bg-rose-400 mr-1.5"></span>
+                                <span className="text-xs text-gray-300 dark:text-gray-300 light:text-gray-600 flex items-center">
+                                  <span className="w-2 h-2 rounded-full bg-rose-400 dark:bg-rose-400 light:bg-rose-600 mr-1.5"></span>
                                   Pending
                                 </span>
-                                <span className="text-xs font-medium text-white">{pending || 0}</span>
+                                <span className="text-xs font-medium text-white dark:text-white light:text-gray-800">{pending || 0}</span>
                               </div>
                               
                               {activities > 0 && (
-                                <div className="pt-1.5 mt-1.5 border-t border-white/5">
+                                <div className="pt-1.5 mt-1.5 border-t border-white/5 dark:border-white/5 light:border-gray-200">
                                   <div className="flex items-center justify-between">
-                                    <span className="text-xs text-purple-300 flex items-center">
-                                      <span className="w-2 h-2 rounded-full bg-purple-400 mr-1.5"></span>
+                                    <span className="text-xs text-purple-300 dark:text-purple-300 light:text-purple-600 flex items-center">
+                                      <span className="w-2 h-2 rounded-full bg-purple-400 dark:bg-purple-400 light:bg-purple-600 mr-1.5"></span>
                                       Activities
                                     </span>
-                                    <span className="text-xs font-medium text-white">{activities}</span>
-                                  </div>
-                                  <div className="mt-1.5 pt-1.5 border-t border-white/5">
-                                    <p className="text-[11px] text-gray-400 font-medium mb-1">Recent:</p>
-                                    <div className="space-y-1">
-                                      {Array(Math.min(activities, 2)).fill(0).map((_, i) => (
-                                        <div key={i} className="flex items-center">
-                                          <span className="w-1 h-1 rounded-full bg-purple-400 mr-2"></span>
-                                          <span className="text-xs text-gray-300 truncate">
-                                            Activity {i + 1} completed
-                                          </span>
-                                        </div>
-                                      ))}
-                                      {activities > 2 && (
-                                        <p className="text-[10px] text-gray-500 text-right">+{activities - 2} more</p>
-                                      )}
-                                    </div>
+                                    <span className="text-xs font-medium text-white dark:text-white light:text-gray-800">{activities}</span>
                                   </div>
                                 </div>
                               )}
                             </div>
                             
-                            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-black/95 border-t border-l border-white/10 -rotate-45 -z-10"></div>
+                            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-black/95 dark:bg-black/95 light:bg-white/95 border-t border-l border-white/10 dark:border-white/10 light:border-gray-200 -rotate-45 -z-10"></div>
                           </div>
                         )}
 
                         <div className="relative w-full h-full flex items-end justify-center group" style={{ minWidth: '28px' }}>
-
                           <div 
                             className="relative w-6 mx-auto transition-all duration-300 group-hover:w-7"
                             style={{
@@ -1400,12 +1336,10 @@ export default function DashboardPage() {
                               transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
                             }}
                           >
-
-                            <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-black/20 rounded-t-lg overflow-hidden border border-white/10 transition-all duration-200 group-hover:border-white/20 shadow-sm">
-
+                            <div className="absolute inset-0 bg-gradient-to-b from-white/10 dark:from-white/10 light:from-gray-200/40 to-black/20 dark:to-black/20 light:to-gray-300/40 rounded-t-lg overflow-hidden border border-white/10 dark:border-white/10 light:border-gray-300 transition-all duration-200 group-hover:border-white/20 dark:group-hover:border-white/20 light:group-hover:border-gray-400 shadow-sm">
                               {pending > 0 && (
                                 <div 
-                                  className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-rose-500 to-rose-400 transition-all duration-300 shadow-sm shadow-rose-500/40"
+                                  className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-rose-500 dark:from-rose-500 light:from-rose-600 to-rose-400 dark:to-rose-400 light:to-rose-500 transition-all duration-300 shadow-sm shadow-rose-500/40"
                                   style={{
                                     height: `${(pending / total) * 100}%`,
                                     borderTop: '1px solid rgba(236, 72, 153, 0.4)'
@@ -1413,23 +1347,20 @@ export default function DashboardPage() {
                                 ></div>
                               )}
                               
-
                               <div 
-                                className="absolute bottom-0 left-0 right-0 bg-gradient-to-b from-emerald-400 to-emerald-500 transition-all duration-300 shadow-sm shadow-emerald-500/40"
+                                className="absolute bottom-0 left-0 right-0 bg-gradient-to-b from-emerald-400 dark:from-emerald-400 light:from-emerald-600 to-emerald-500 dark:to-emerald-500 light:to-emerald-700 transition-all duration-300 shadow-sm shadow-emerald-500/40"
                                 style={{
                                   height: `${(completed / total) * 100}%`,
                                   borderTopLeftRadius: '0.5rem',
                                   borderTopRightRadius: '0.5rem'
                                 }}
                               >
-
-                                <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent opacity-40"></div>
+                                <div className="absolute inset-0 bg-gradient-to-b from-white/20 dark:from-white/20 light:from-white/30 to-transparent opacity-40"></div>
                               </div>
                               
-
                               {activities > 0 && (
                                 <div 
-                                  className="absolute -bottom-px left-0 right-0 h-1 bg-gradient-to-t from-purple-500 to-purple-400 transition-all duration-300 group-hover:from-purple-400 group-hover:to-purple-300 shadow-sm shadow-purple-500/40"
+                                  className="absolute -bottom-px left-0 right-0 h-1 bg-gradient-to-t from-purple-500 dark:from-purple-500 light:from-purple-600 to-purple-400 dark:to-purple-400 light:to-purple-500 transition-all duration-300 group-hover:from-purple-400 dark:group-hover:from-purple-400 light:group-hover:from-purple-500 group-hover:to-purple-300 dark:group-hover:to-purple-300 light:group-hover:to-purple-400 shadow-sm shadow-purple-500/40"
                                   style={{
                                     bottom: `${(activities / total) * 100}%`
                                   }}
@@ -1437,15 +1368,13 @@ export default function DashboardPage() {
                               )}
                             </div>
                             
-
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent rounded-t-lg"></div>
+                              <div className="absolute inset-0 bg-gradient-to-b from-white/10 dark:from-white/10 light:from-gray-200/40 to-transparent rounded-t-lg"></div>
                             </div>
                           </div>
                           
-
                           <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-full text-center">
-                            <span className="text-[10px] font-medium text-white/40 group-hover:text-white/70 transition-colors select-none">
+                            <span className="text-[10px] font-medium text-white/40 dark:text-white/40 light:text-gray-500 group-hover:text-white/70 dark:group-hover:text-white/70 light:group-hover:text-gray-700 transition-colors select-none">
                               {day.slice(0, 1)}
                             </span>
                           </div>
@@ -1454,12 +1383,11 @@ export default function DashboardPage() {
                     );
                   })
                 ) : (
-
                   <div className="absolute inset-0 flex flex-col items-center justify-center space-y-3">
-                    <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center">
-                      <Activity className="h-5 w-5 text-white/30" />
+                    <div className="w-12 h-12 rounded-full bg-white/5 dark:bg-white/5 light:bg-gray-100 flex items-center justify-center">
+                      <Activity className="h-5 w-5 text-white/30 dark:text-white/30 light:text-gray-400" />
                     </div>
-                    <p className="text-sm text-white/60 text-center max-w-[200px]">
+                    <p className="text-sm text-white/60 dark:text-white/60 light:text-gray-500 text-center max-w-[200px]">
                       No activity data available for this week
                     </p>
                   </div>
@@ -1469,18 +1397,18 @@ export default function DashboardPage() {
               <div className="flex justify-between px-0.5 mt-1">
                 {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
                   <div key={i} className="w-7 text-center">
-                    <span className="text-[10px] text-white/30 select-none">{day}</span>
+                    <span className="text-[10px] text-white/30 dark:text-white/30 light:text-gray-400 select-none">{day}</span>
                   </div>
                 ))}
               </div>
             </div>
             
             <div className="flex items-center justify-between text-xs pt-1">
-              <div className="flex items-center space-x-2 text-white/50">
-                <Activity className="h-3 w-3 text-white/60" />
-                <span className="text-white/70">Weekly Activity</span>
+              <div className="flex items-center space-x-2 text-white/50 dark:text-white/50 light:text-gray-600">
+                <Activity className="h-3 w-3 text-white/60 dark:text-white/60 light:text-gray-500" />
+                <span className="text-white/70 dark:text-white/70 light:text-gray-700">Weekly Activity</span>
               </div>
-              <div className="text-white/50 font-medium">
+              <div className="text-white/50 dark:text-white/50 light:text-gray-600 font-medium">
                 {energyGraphData ? energyGraphData.reduce((sum, day) => sum + (day.activities || 0), 0) : 0} activities
               </div>
             </div>
