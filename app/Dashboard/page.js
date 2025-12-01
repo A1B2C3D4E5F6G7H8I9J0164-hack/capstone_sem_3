@@ -1400,35 +1400,36 @@ export default function DashboardPage() {
 
                               {pending > 0 && (
                                 <div 
-                                  className="absolute bottom-0 left-0 right-0 bg-rose-500/20 transition-all duration-300"
+                                  className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-rose-500 to-rose-400/90 transition-all duration-300"
                                   style={{
                                     height: `${(pending / total) * 100}%`,
-                                    borderTop: '1px solid rgba(236, 72, 153, 0.2)'
+                                    borderTop: '1px solid rgba(236, 72, 153, 0.4)',
+                                    boxShadow: 'inset 0 1px 2px rgba(236, 72, 153, 0.2)'
                                   }}
                                 ></div>
                               )}
                               
 
                               <div 
-                                className="absolute bottom-0 left-0 right-0 bg-gradient-to-b from-white/90 to-white/70 transition-all duration-300"
+                                className="absolute bottom-0 left-0 right-0 bg-gradient-to-b from-emerald-400 to-emerald-300/90 transition-all duration-300"
                                 style={{
                                   height: `${(completed / total) * 100}%`,
                                   borderTopLeftRadius: '0.5rem',
                                   borderTopRightRadius: '0.5rem',
-                                  boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.1)'
+                                  boxShadow: 'inset 0 1px 2px rgba(16, 185, 129, 0.2), 0 0 12px rgba(16, 185, 129, 0.15)'
                                 }}
                               >
 
-                                <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-20"></div>
+                                <div className="absolute inset-0 bg-gradient-to-b from-emerald-300/30 to-transparent opacity-60"></div>
                               </div>
                               
 
                               {activities > 0 && (
                                 <div 
-                                  className="absolute -bottom-px left-0 right-0 h-0.5 bg-purple-400/90 transition-all duration-300 group-hover:bg-purple-300"
+                                  className="absolute -bottom-px left-0 right-0 h-1 bg-gradient-to-t from-purple-500 to-purple-400 transition-all duration-300 group-hover:from-purple-400 group-hover:to-purple-300"
                                   style={{
                                     bottom: `${(activities / total) * 100}%`,
-                                    boxShadow: '0 0 8px rgba(168, 85, 247, 0.4)'
+                                    boxShadow: '0 0 12px rgba(168, 85, 247, 0.6), inset 0 1px 2px rgba(168, 85, 247, 0.3)'
                                   }}
                                 ></div>
                               )}
