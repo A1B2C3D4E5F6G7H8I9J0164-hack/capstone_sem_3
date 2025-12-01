@@ -1242,13 +1242,18 @@ export default function DashboardPage() {
               </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/70">
                 <span className="flex items-center">
-                  <span className="w-2 h-2 rounded-full bg-white/90 mr-1.5"></span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 mr-1.5 shadow-sm shadow-emerald-400/50"></span>
                   <span className="text-white/80">Completed</span>
                 </span>
                 <span className="hidden sm:inline text-white/30">•</span>
                 <span className="flex items-center">
-                  <span className="w-2 h-2 rounded-full bg-white/50 mr-1.5"></span>
+                  <span className="w-2 h-2 rounded-full bg-rose-400 mr-1.5 shadow-sm shadow-rose-400/50"></span>
                   <span className="text-white/60">Pending</span>
+                </span>
+                <span className="hidden sm:inline text-white/30">•</span>
+                <span className="flex items-center">
+                  <span className="w-2 h-2 rounded-full bg-purple-400 mr-1.5 shadow-sm shadow-purple-400/50"></span>
+                  <span className="text-white/60">Activities</span>
                 </span>
               </div>
             </div>
