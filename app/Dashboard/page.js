@@ -108,7 +108,7 @@ export default function DashboardPage() {
 
   const API_BASE = "https://capstone-backend-3-jthr.onrender.com/api";
 
-  const getAuthHeaders = () => {
+  const getAuthHeaders = useCallback(() => {
     if (typeof window === "undefined") return {};
     const token = localStorage.getItem("token");
     if (!token) {
@@ -119,7 +119,7 @@ export default function DashboardPage() {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     };
-  };
+  }, []);
 
   const handleAttachClick = () => {
     if (attachInputRef.current && typeof attachInputRef.current.click === "function") {
@@ -148,16 +148,16 @@ export default function DashboardPage() {
     }
   };
 
-  const handleApiError = (error, context = '') => {
+  const handleApiError = useCallback((error, context = '') => {
     console.error(`Error ${context}:`, error);
     if (error.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/Login';
     }
     return null;
-  };
+  }, []);
 
-  const fetchWithAuth = async (url, options = {}) => {
+  const fetchWithAuth = useCallback(async (url, options = {}) => {
     try {
       const headers = getAuthHeaders();
       if (Object.keys(headers).length === 0) return null; 
@@ -187,7 +187,7 @@ export default function DashboardPage() {
     } catch (error) {
       return handleApiError(error, `fetching ${url}`);
     }
-  };
+  }, [getAuthHeaders, handleApiError]);
 
   const handleUpdateBlueprintClick = () => {
     if (typeof window === "undefined") return;
@@ -210,7 +210,7 @@ export default function DashboardPage() {
       setMaxStreak(data.maxStreak || 0);
       setLastActivityDate(data.lastActivityDate || null);
     }
-  }, []);
+  }, [fetchWithAuth]);
 
   const updateStreak = useCallback(async () => {
     const data = await fetchWithAuth(`${API_BASE}/dashboard/streak/update`, {
@@ -221,7 +221,7 @@ export default function DashboardPage() {
       setMaxStreak(data.maxStreak || 0);
       setLastActivityDate(data.lastActivityDate || null);
     }
-  }, []);
+  }, [fetchWithAuth]);
 
   const fetchMilestones = useCallback(async () => {
     const data = await fetchWithAuth(`${API_BASE}/dashboard/milestones`);
@@ -233,7 +233,7 @@ export default function DashboardPage() {
         id: m._id,
       })));
     }
-  }, []);
+  }, [fetchWithAuth]);
 
   const fetchOverview = useCallback(async () => {
     const data = await fetchWithAuth(`${API_BASE}/dashboard/overview`);
@@ -244,7 +244,7 @@ export default function DashboardPage() {
         id: o._id,
       })));
     }
-  }, []);
+  }, [fetchWithAuth]);
 
   const fetchSchedules = useCallback(async () => {
     const data = await fetchWithAuth(`${API_BASE}/dashboard/schedules`);
@@ -270,7 +270,7 @@ export default function DashboardPage() {
     });
 
     setScheduleItems(scheduleItems);
-  }, []);
+  }, [fetchWithAuth]);
 
   const fetchPendingTasks = useCallback(async () => {
     try {
@@ -304,7 +304,7 @@ export default function DashboardPage() {
       setPendingTasksCount(0);
       setPendingTasks([]);
     }
-  }, []);
+  }, [getAuthHeaders]);
 
   const fetchEnergyGraphData = useCallback(async () => {
     try {
@@ -361,7 +361,7 @@ export default function DashboardPage() {
       ];
       setEnergyGraphData(sampleData);
     }
-  }, []);
+  }, [getAuthHeaders, fetchWithAuth]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -392,7 +392,7 @@ export default function DashboardPage() {
 
     loadData();
 
-  }, []);
+  }, [fetchWithAuth, getAuthHeaders, fetchStreak, fetchMilestones, fetchOverview, fetchSchedules, fetchPendingTasks, fetchEnergyGraphData, fetchDeepWorkStats, updateStreak]);
 
   const logDeepWorkSession = useCallback(async (minutes) => {
     const mins = Math.max(1, Number(minutes) || 0);
@@ -426,7 +426,7 @@ export default function DashboardPage() {
         };
       });
     }
-  }, []);
+  }, [fetchWithAuth]);
 
   useEffect(() => {
     if (!isFocusRunning || remainingSeconds <= 0) return;
@@ -882,7 +882,7 @@ export default function DashboardPage() {
       });
       setDeepWorkGoalInput(data.dailyGoalMinutes || 0);
     }
-  }, []);
+  }, [fetchWithAuth]);
 
   const handleStartFocus = () => {
     const mins = Number.isFinite(focusMinutes) ? Math.max(1, focusMinutes) : 25;
@@ -955,7 +955,7 @@ export default function DashboardPage() {
       });
 
     return () => controller.abort();
-  }, []);
+  }, [fetchWithAuth]);
 
   return (
     <div className="relative min-h-screen bg-[#030303] dark:bg-[#030303] light:bg-gray-50 text-white dark:text-white light:text-gray-900 overflow-hidden">
@@ -1180,9 +1180,7 @@ export default function DashboardPage() {
               </button>
             </div>
           </motion.div>
-        </section>
 
-        <section className="grid gap-6 lg:grid-cols-3">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1256,12 +1254,11 @@ export default function DashboardPage() {
                     </div>
                   ))
                 ) : Array.isArray(energyGraphData) && energyGraphData.length > 0 ? (
-                  energyGraphData.map((item) => {
-                    const day = item.day || '';
-                    const total = item.total || 0;
-                    const completed = item.completed || 0;
-                    const pending = item.pending || 0;
-                    const activities = item.activities || 0;
+                  energyGraphData.map((d) => {
+                    const total = Math.max(1, d.total || 0);
+                    const completed = d.completed || 0;
+                    const pending = d.pending || 0;
+                    const activities = d.activities || 0;
                     
                     const maxValue = Math.max(1, ...energyGraphData.map(d => 
                       Math.max(d.total || 0, d.activities || 0, d.completed || 0, d.pending || 0)
@@ -1271,13 +1268,13 @@ export default function DashboardPage() {
                     const completedHeight = total > 0 ? (completed / total) * 100 : 0;
                     const activitiesHeight = total > 0 ? (activities / total) * 100 : 0;
                     
-                    const isHovered = hoveredDay === day;
+                    const isHovered = hoveredDay === d.day;
                     
                     return (
                       <div
-                        key={day}
+                        key={d.day}
                         className="flex-1 flex flex-col items-center h-full relative group"
-                        onMouseEnter={() => setHoveredDay(day)}
+                        onMouseEnter={() => setHoveredDay(d.day)}
                         onMouseLeave={() => setHoveredDay(null)}
                       >
                         {isHovered && (
@@ -1285,7 +1282,7 @@ export default function DashboardPage() {
                             className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-2 rounded-lg bg-gradient-to-b from-black/95 dark:from-black/95 light:from-white/95 to-gray-900/95 dark:to-gray-900/95 light:to-gray-100/95 border border-white/10 dark:border-white/10 light:border-gray-200 backdrop-blur-md z-50 shadow-xl shadow-black/40 dark:shadow-black/40 light:shadow-gray-300/40 w-40 text-sm"
                           >
                             <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-white/10 dark:border-white/10 light:border-gray-200">
-                              <p className="text-sm font-semibold text-white dark:text-white light:text-gray-800">{day}</p>
+                              <p className="text-sm font-semibold text-white dark:text-white light:text-gray-800">{d.day}</p>
                               <div className="flex items-center space-x-1.5">
                                 <span className="px-1.5 py-0.5 text-[10px] font-medium rounded bg-white/10 dark:bg-white/10 light:bg-gray-100 text-white/80 dark:text-white/80 light:text-gray-700">
                                   {total} total
@@ -1374,7 +1371,7 @@ export default function DashboardPage() {
                           
                           <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-full text-center">
                             <span className="text-[10px] font-medium text-white/40 dark:text-white/40 light:text-gray-500 group-hover:text-white/70 dark:group-hover:text-white/70 light:group-hover:text-gray-700 transition-colors select-none">
-                              {day.slice(0, 1)}
+                              {d.day.slice(0, 1)}
                             </span>
                           </div>
                         </div>
