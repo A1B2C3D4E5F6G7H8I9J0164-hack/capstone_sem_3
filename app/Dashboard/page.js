@@ -363,6 +363,7 @@ export default function DashboardPage() {
     }
   }, [getAuthHeaders, fetchWithAuth]);
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (typeof window === "undefined") return;
     
@@ -392,7 +393,8 @@ export default function DashboardPage() {
 
     loadData();
 
-  }, [fetchWithAuth, getAuthHeaders, fetchStreak, fetchMilestones, fetchOverview, fetchSchedules, fetchPendingTasks, fetchEnergyGraphData, fetchDeepWorkStats, updateStreak]);
+  }, [fetchWithAuth]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const logDeepWorkSession = useCallback(async (minutes) => {
     const mins = Math.max(1, Number(minutes) || 0);
