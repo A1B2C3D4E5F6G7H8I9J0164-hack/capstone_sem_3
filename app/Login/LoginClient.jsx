@@ -88,7 +88,7 @@ export default function LoginClient() {
 
   const handleGoogleAuth = () => {
     window.location.href =
-      "https://capstone-backend-3-jthr.onrender.com/api/auth/google";
+      "http://localhost:5001/api/auth/google";
   };
 
   async function handleLogin(e) {
@@ -100,7 +100,7 @@ export default function LoginClient() {
 
     try {
       const res = await fetch(
-        "https://capstone-backend-3-jthr.onrender.com/api/auth/login",
+        "http://localhost:5001/api/auth/login",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -134,7 +134,7 @@ export default function LoginClient() {
 
     try {
       const res = await fetch(
-        "https://capstone-backend-3-jthr.onrender.com/api/auth/signup",
+        "http://localhost:5001/api/auth/signup",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
