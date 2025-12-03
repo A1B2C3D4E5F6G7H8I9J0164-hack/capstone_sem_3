@@ -7,7 +7,7 @@ import Navbar from "../components/Navbar";
 import HeroBackground from "../components/HeroBackground";
 import { Search, Plus, Loader2, Sparkles, ListChecks, ChevronLeft, ChevronRight, FileText, Filter, ArrowUpDown, X } from "lucide-react";
 
-const API_BASE = "http://localhost:5001/api";
+const API_BASE = "https://capstone-backend-3-jthr.onrender.com/api";
 
 const getAuthHeaders = () => {
   if (typeof window === "undefined") return {};

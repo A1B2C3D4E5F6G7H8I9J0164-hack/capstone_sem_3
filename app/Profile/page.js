@@ -54,7 +54,7 @@ export default function ProfilePage() {
   const [overview, setOverview] = useState([]);
   const [milestones, setMilestones] = useState([]);
 
-  const API_BASE = "http://localhost:5001/api";
+  const API_BASE = "https://capstone-backend-3-jthr.onrender.com/api";
 
   const getAuthHeaders = () => {
     if (typeof window === "undefined") return {};
