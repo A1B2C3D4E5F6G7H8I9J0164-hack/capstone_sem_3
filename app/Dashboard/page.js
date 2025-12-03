@@ -102,7 +102,7 @@ export default function DashboardPage() {
     []
   );
 
-  const API_BASE = "https://capstone-backend-3-jthr.onrender.com/api";
+  const API_BASE = "http://localhost:5001/api";
 
   const getAuthHeaders = useCallback(() => {
     if (typeof window === "undefined") return {};
@@ -928,7 +928,7 @@ export default function DashboardPage() {
 
     const controller = new AbortController();
 
-    fetch("https://capstone-backend-3-jthr.onrender.com/api/auth/me", {
+    fetch("http://localhost:5001/api/auth/me", {
       headers: {
         Authorization: `Bearer ${token}`,
       },

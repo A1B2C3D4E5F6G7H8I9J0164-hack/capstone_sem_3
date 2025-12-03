@@ -50,7 +50,7 @@ export default function SettingsPage() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    fetch("https://capstone-backend-3-jthr.onrender.com/api/auth/me", {
+    fetch("http://localhost:5001/api/auth/me", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
