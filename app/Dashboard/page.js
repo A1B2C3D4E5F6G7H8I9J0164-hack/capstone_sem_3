@@ -736,7 +736,6 @@ export default function DashboardPage() {
         method: "DELETE",
         headers: headers,
       });
-
       if (scheduleRes.ok) {
 
         if (taskId) {
